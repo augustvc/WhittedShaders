@@ -91,5 +91,31 @@ namespace P
             Dispose(true);
             GC.SuppressFinalize(this);
         }
+        public static int CreateComputeShaderProgram(string path)
+        {
+            int programHandle = GL.CreateProgram();
+
+            int shaderHandle = GL.CreateShader(ShaderType.ComputeShader);
+            string shaderSrc;
+            using (StreamReader reader = new StreamReader(path, Encoding.UTF8))
+            {
+                shaderSrc = reader.ReadToEnd();
+            }
+            GL.ShaderSource(shaderHandle, shaderSrc);
+            GL.CompileShader(shaderHandle);
+
+            string log = GL.GetShaderInfoLog(shaderHandle);
+            if (log != String.Empty)
+            {
+                Console.WriteLine(log);
+            }
+
+            GL.AttachShader(programHandle, shaderHandle);
+            GL.LinkProgram(programHandle);
+            GL.DetachShader(programHandle, shaderHandle);
+            GL.DeleteShader(shaderHandle);
+
+            return programHandle;
+        }
     }
 }

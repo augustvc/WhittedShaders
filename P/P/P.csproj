@@ -58,6 +58,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <None Include="firstHit.shader" />
     <None Include="generate.shader" />
     <None Include="OpenTK.dll.config" />
     <None Include="packages.config" />

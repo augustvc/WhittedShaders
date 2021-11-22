@@ -11,97 +11,72 @@ namespace P
 {
     class GPURayTracer
     {
-        int changeProgram;
+        int generateProgram;
         int outputProgram;
-        int ssbo;
-        int primaryRaySSBO;
+        int firstHitProgram;
+        int raySSBO = -1;
+        int width = 1;
+        int height = 1;
+        int textureHandle = -1;
         public GPURayTracer ()
         {
-            int generateShader = GL.CreateShader(ShaderType.ComputeShader);
-            string genShaderSrc;
-            using (StreamReader reader = new StreamReader("../../generate.shader", Encoding.UTF8))
-            {
-                genShaderSrc = reader.ReadToEnd();
-            }
-            GL.ShaderSource(generateShader, genShaderSrc);
-            GL.CompileShader(generateShader);
+            generateProgram = Shader.CreateComputeShaderProgram("../../generate.shader");
+            firstHitProgram = Shader.CreateComputeShaderProgram("../../firstHit.shader");
+            outputProgram = Shader.CreateComputeShaderProgram("../../output.shader");
 
-            string log = GL.GetShaderInfoLog(generateShader);
-            if (log != String.Empty)
-            {
-                Console.WriteLine(log);
-            }
-            int status;
-            GL.GetShader(generateShader, ShaderParameter.CompileStatus, out status);
-            //Console.WriteLine("Genshader Compile status: " + status);
+            SetupBuffers(width, height);
+        }        
 
-            int shader2 = GL.CreateShader(ShaderType.ComputeShader);
-
-            string shaderSrc;
-            using (StreamReader reader = new StreamReader("../../output.shader", Encoding.UTF8))
-            {
-                shaderSrc = reader.ReadToEnd();
-            }
-            GL.ShaderSource(shader2, shaderSrc);
-            GL.CompileShader(shader2);
-            String log2 = GL.GetShaderInfoLog(shader2);
-            if (log2 != String.Empty)
-            {
-                Console.WriteLine(log2);
-            }
-
-            changeProgram = GL.CreateProgram();
-            GL.AttachShader(changeProgram, generateShader);
-            GL.LinkProgram(changeProgram);
-            GL.DetachShader(changeProgram, generateShader);
-            GL.DeleteShader(generateShader);
-            GL.GetProgram(changeProgram, GetProgramParameterName.LinkStatus, out status);
-
-            outputProgram = GL.CreateProgram();
-            GL.AttachShader(outputProgram, shader2);
-            GL.LinkProgram(outputProgram);
-            GL.DetachShader(outputProgram, shader2);
-            GL.DeleteShader(shader2);
-            ssbo = GL.GenBuffer();
-            primaryRaySSBO = GL.GenBuffer();
-        }
-        public int GenTex(int width, int height)
+        void SetupBuffers(int width, int height)
         {
-            int tex = GL.GenTexture();
+            if(raySSBO != -1) { GL.DeleteBuffer(raySSBO); }
+            raySSBO = GL.GenBuffer();
+
+            GL.UseProgram(generateProgram);
+
+            GL.BindBuffer(BufferTarget.ShaderStorageBuffer, raySSBO);
+            GL.BufferData(BufferTarget.ShaderStorageBuffer,
+               (1 + width * height) * (Vector4.SizeInBytes * 3), IntPtr.Zero, BufferUsageHint.StaticDraw);
+            GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 5, raySSBO);
+
+            GL.UseProgram(firstHitProgram);
+            GL.BindBuffer(BufferTarget.ShaderStorageBuffer, raySSBO);
+            GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 5, raySSBO);            
+
+            GL.UseProgram(outputProgram);
+            GL.BindBuffer(BufferTarget.ShaderStorageBuffer, raySSBO);
+            GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 5, raySSBO);
+
+            if(textureHandle != -1) { GL.DeleteTexture(textureHandle); } //We already had a texture, so delete it.
+            textureHandle = GL.GenTexture();
             GL.ActiveTexture(TextureUnit.Texture0);
-            GL.BindTexture(TextureTarget.Texture2D, tex);
+            GL.BindTexture(TextureTarget.Texture2D, textureHandle);
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
             GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba32f, width, height, 0, PixelFormat.Rgba, PixelType.Float, (IntPtr)null);
-            GL.BindImageTexture(0, tex, 0, false, 0, TextureAccess.WriteOnly, SizedInternalFormat.Rgba32f);
+            GL.BindImageTexture(0, textureHandle, 0, false, 0, TextureAccess.WriteOnly, SizedInternalFormat.Rgba32f);
+        }
 
-            GL.UseProgram(changeProgram);
-            
-            GL.BindBuffer(BufferTarget.ShaderStorageBuffer, ssbo);
-            GL.BufferData(BufferTarget.ShaderStorageBuffer, width * height * Vector4.SizeInBytes, IntPtr.Zero, BufferUsageHint.StaticDraw);
-            GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 6, ssbo);
+        public void GenTex(int width, int height)
+        {
+            if(width != this.width || height != this.height)
+            {
+                SetupBuffers(width, height);
+            }
 
-            GL.BindBuffer(BufferTarget.ShaderStorageBuffer, primaryRaySSBO);
-            GL.BufferData(BufferTarget.ShaderStorageBuffer,
-                width * height * (Vector4.SizeInBytes * 2 + sizeof(float)), IntPtr.Zero, BufferUsageHint.StaticDraw);
-            GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 5, primaryRaySSBO);
-
+            GL.UseProgram(generateProgram);
             GL.DispatchCompute(width, height, 1);
+            GL.MemoryBarrier(MemoryBarrierFlags.ShaderStorageBarrierBit);
+
+            GL.UseProgram(firstHitProgram);
+            GL.DispatchCompute(524288, 1, 1);
             GL.MemoryBarrier(MemoryBarrierFlags.ShaderStorageBarrierBit);
 
             GL.UseProgram(outputProgram);
-            GL.BindBuffer(BufferTarget.ShaderStorageBuffer, ssbo);
-            GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 6, ssbo);
-
-            GL.BindBuffer(BufferTarget.ShaderStorageBuffer, primaryRaySSBO);
-            GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 5, primaryRaySSBO);
-
             GL.DispatchCompute(width, height, 1);
             GL.MemoryBarrier(MemoryBarrierFlags.ShaderStorageBarrierBit);
-
-            return tex;
         }
 
         private bool disposedValue = false;
@@ -110,7 +85,8 @@ namespace P
         {
             if (!disposedValue)
             {
-                GL.DeleteProgram(changeProgram);
+                GL.DeleteProgram(generateProgram);
+                GL.DeleteProgram(firstHitProgram);
                 GL.DeleteProgram(outputProgram);
 
                 disposedValue = true;
@@ -119,14 +95,15 @@ namespace P
 
         ~GPURayTracer()
         {
-            GL.DeleteProgram(changeProgram);
+            GL.DeleteProgram(generateProgram);
+            GL.DeleteProgram(firstHitProgram);
             GL.DeleteProgram(outputProgram);
         }
 
         public void Dispose()
         {
-            GL.DeleteBuffer(ssbo);
-            GL.DeleteBuffer(primaryRaySSBO);
+            GL.DeleteBuffer(raySSBO);
+            GL.DeleteTexture(textureHandle);
             Dispose(true);
             GC.SuppressFinalize(this);
         }

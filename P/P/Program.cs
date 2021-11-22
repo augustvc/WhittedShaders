@@ -12,6 +12,7 @@ namespace P
 {
     class Game : GameWindow
     {
+        bool useGPU = true;
         static void Main(string[] args)
         {
             using (Game game = new Game(800, 600, "Ray Tracer"))
@@ -68,21 +69,25 @@ namespace P
 
         protected override void OnRenderFrame(FrameEventArgs e)
         {
-            CPUFrame();
-            //GPUFrame();   
+            if (useGPU)
+            {
+                GPUFrame();
+            }
+            else
+            {
+                CPUFrame();
+            }
             base.OnRenderFrame(e);
         }
 
         void GPUFrame()
         {
-            int texHandle = texHandle = gpuRayTracer.GenTex(Width, Height);
+            gpuRayTracer.GenTex(Width, Height);
             
             shader.Use();
             GL.Clear(ClearBufferMask.ColorBufferBit);
             GL.DrawArrays(PrimitiveType.Quads, 0, 4);
             Context.SwapBuffers();
-
-            GL.DeleteTexture(texHandle);
         }
 
         void CPUFrame()
@@ -118,6 +123,7 @@ namespace P
             base.OnResize(e);
         }
 
+        bool newYPress = true;
         protected override void OnUpdateFrame(FrameEventArgs e)
         {
             KeyboardState ks = Keyboard.GetState();
@@ -125,6 +131,17 @@ namespace P
             if(ks.IsKeyDown(Key.Escape))
             {
                 Exit();
+            }
+
+            if(ks.IsKeyDown(Key.Y)) {
+                if (newYPress)
+                {
+                    useGPU = !useGPU;
+                    newYPress = false;
+                }
+            } else
+            {
+                newYPress = true;
             }
 
             base.OnUpdateFrame(e);

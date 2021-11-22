@@ -16,7 +16,7 @@ namespace P
         {
             Vector3 toOrg = Origin - ray.Origin;
             float t = Vector3.Dot(toOrg, ray.Direction);
-            Vector3 diff = Origin - (t * ray.Direction);
+            Vector3 diff = toOrg - (t * ray.Direction);
             float dsq = Vector3.Dot(diff, diff);
             if(dsq > radiusSq)
                 return;
