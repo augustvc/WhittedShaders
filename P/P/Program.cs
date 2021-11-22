@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using OpenTK;
 using OpenTK.Graphics;
 using OpenTK.Input;
 using OpenTK.Graphics.OpenGL;
+using OpenTK;
 
 namespace P
 {
@@ -31,6 +31,7 @@ namespace P
 
         Shader shader;
         RayTracer rayTracer;
+        GPURayTracer gpuRayTracer;
 
         protected override void OnLoad(EventArgs e)
         {
@@ -51,6 +52,7 @@ namespace P
             shader.Use();
 
             rayTracer = new RayTracer();
+            gpuRayTracer = new GPURayTracer();
 
             base.OnLoad(e);
         }
@@ -60,16 +62,37 @@ namespace P
             GL.BindBuffer(BufferTarget.ArrayBuffer, 0);
             GL.DeleteBuffer(VBO);
             shader.Dispose();
+            gpuRayTracer.Dispose();
             base.OnUnload(e);
         }
 
         protected override void OnRenderFrame(FrameEventArgs e)
         {
+            CPUFrame();
+            //GPUFrame();   
+            base.OnRenderFrame(e);
+        }
+
+        void GPUFrame()
+        {
+            int texHandle = texHandle = gpuRayTracer.GenTex(Width, Height);
+            
+            shader.Use();
+            GL.Clear(ClearBufferMask.ColorBufferBit);
+            GL.DrawArrays(PrimitiveType.Quads, 0, 4);
+            Context.SwapBuffers();
+
+            GL.DeleteTexture(texHandle);
+        }
+
+        void CPUFrame()
+        {
             GL.Clear(ClearBufferMask.ColorBufferBit);
 
             float[] pixels = rayTracer.GenTexture(Width, Height);
-            
+
             int thandle = GL.GenTexture();
+            shader.Use();
             GL.ActiveTexture(TextureUnit.Texture0);
             GL.BindTexture(TextureTarget.Texture2D, thandle);
 
@@ -87,8 +110,6 @@ namespace P
             Context.SwapBuffers();
 
             GL.DeleteTexture(thandle);
-
-            base.OnRenderFrame(e);
         }
 
         protected override void OnResize(EventArgs e)
