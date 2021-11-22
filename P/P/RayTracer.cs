@@ -10,11 +10,14 @@ namespace P
     class RayTracer
     {
         List<Primitive> Scene;
+        List<Light> LightSources;
 
         public RayTracer()
         {
             Scene = new List<Primitive>();
             Scene.Add(new Sphere(0, -1, 8, 2, new Vector3(1, 0, 0)));
+            LightSources = new List<Light>();
+            LightSources.Add(new Light(new Vector3(0.0f, 8.0f, 0.0f), new Vector3(20f, 20f, 20f)));
         }
 
         public float[] GenTexture (int width, int height)
@@ -32,6 +35,7 @@ namespace P
 
             Vector3 xArm = BottomRight - BottomLeft;
             Vector3 yArm = TopLeft - BottomLeft;
+            yArm *= (float)height / (float)width;
 
             int index = 0;
             for (int y = 0; y < height; y++)
@@ -56,7 +60,32 @@ namespace P
                     //If the ray hit an object, we set green to 1.
                     if (ray.objectHit != -1)
                     {
-                        pixelColor[1] = 1.0f;
+                        Vector3 normal = Scene[ray.objectHit].GetNormal(ray);
+                        Vector3 collisionPosition = ray.Origin + ray.t * ray.Direction;
+                        Vector3 shadowRayOrigin = collisionPosition + 0.0001f * normal;
+
+                        for (int li = 0; li < LightSources.Count; li++) {
+                            float inverseDistSq = 1.0f / (LightSources[li].position - shadowRayOrigin).LengthSquared;
+                            
+                            Ray shadowRay = new Ray(shadowRayOrigin, (LightSources[li].position - shadowRayOrigin).Normalized());
+                            for (int i = 0; i < Scene.Count; i++)
+                            {
+                                Scene[i].Intersect(shadowRay);
+                            }
+                            if (shadowRay.objectHit == -1)
+                            {
+                                for(int j = 0; j < 3; j++)
+                                {
+                                    float ndotl = Vector3.Dot(shadowRay.Direction, normal);
+                                    pixelColor[j] += LightSources[li].intensity[j] * Scene[ray.objectHit].color[j] * inverseDistSq * ndotl;
+                                }
+                            }
+                        }
+                        for (int j = 0; j < 3; j++)
+                        {
+                            //Ambient light
+                            pixelColor[j] += Scene[ray.objectHit].color[j] * 0.05f;
+                        }
                     }
                     
                     //Put the pixel values in the output image.

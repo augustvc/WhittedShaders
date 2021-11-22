@@ -9,12 +9,17 @@ namespace P
 {
     class Primitive
     {
-        Vector3 color;
-        static long primitiveCount;
-        long primitiveID;
+        public Vector3 color = new Vector3(0f, 0.5f, 0f);
+        static int primitiveCount;
+        int primitiveID;
         public virtual void Intersect(Ray ray)
         {
 
+        }
+
+        public virtual Vector3 GetNormal(Ray ray)
+        {
+            return new Vector3(0.0f);
         }
 
         public Primitive(Vector3 color)
@@ -24,7 +29,7 @@ namespace P
             primitiveCount++;
         }
 
-        public long GetID ()
+        public int GetID ()
         {
             return primitiveID;
         }

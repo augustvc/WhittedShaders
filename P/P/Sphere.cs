@@ -28,6 +28,12 @@ namespace P
             ray.objectHit = GetID();
         }
 
+        public override Vector3 GetNormal(Ray ray)
+        {
+            Vector3 collisionPoint = ray.Origin + ray.Direction * ray.t;
+            return (collisionPoint - Origin).Normalized();
+        }
+
         public Sphere(Vector3 Origin, float radius, Vector3 color) : base(color)
         {
             this.Origin = Origin;

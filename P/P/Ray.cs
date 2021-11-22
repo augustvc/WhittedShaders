@@ -12,7 +12,7 @@ namespace P
         public float t = float.MaxValue;
         public Vector3 Origin;
         public Vector3 Direction;
-        public long objectHit = -1;
+        public int objectHit = -1;
 
         public Ray(Vector3 Origin, Vector3 Direction)
         {
