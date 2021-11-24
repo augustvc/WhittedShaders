@@ -15,7 +15,7 @@ namespace P
         bool useGPU = true;
         static void Main(string[] args)
         {
-            using (Game game = new Game(800, 600, "Ray Tracer"))
+            using (Game game = new Game(800, 600, "GPU Ray Tracer"))
             {
                 game.Run(60.0);
             }
@@ -138,6 +138,13 @@ namespace P
                 {
                     useGPU = !useGPU;
                     newYPress = false;
+                    if (useGPU)
+                    {
+                        Title = "GPU Ray Tracer";
+                    } else
+                    {
+                        Title = "CPU Ray Tracer";
+                    }
                 }
             } else
             {

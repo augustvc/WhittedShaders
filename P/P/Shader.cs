@@ -107,6 +107,7 @@ namespace P
             string log = GL.GetShaderInfoLog(shaderHandle);
             if (log != String.Empty)
             {
+                Console.WriteLine("Error when compiling " + path);
                 Console.WriteLine(log);
             }
 

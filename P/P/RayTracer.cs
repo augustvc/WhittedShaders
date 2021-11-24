@@ -77,7 +77,8 @@ namespace P
                                 for(int j = 0; j < 3; j++)
                                 {
                                     float ndotl = Vector3.Dot(shadowRay.Direction, normal);
-                                    pixelColor[j] += LightSources[li].intensity[j] * Scene[ray.objectHit].color[j] * inverseDistSq * ndotl;
+                                    if (ndotl > 0.0f)
+                                        pixelColor[j] += LightSources[li].intensity[j] * Scene[ray.objectHit].color[j] * inverseDistSq * ndotl;
                                 }
                             }
                         }

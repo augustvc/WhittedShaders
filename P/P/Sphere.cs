@@ -9,12 +9,12 @@ namespace P
 {
     class Sphere : Primitive
     {
-        Vector3 Origin;
+        Vector3 Location;
         float radius;
         float radiusSq;
         public override void Intersect(Ray ray)
         {
-            Vector3 toOrg = Origin - ray.Origin;
+            Vector3 toOrg = Location - ray.Origin;
             float t = Vector3.Dot(toOrg, ray.Direction);
             Vector3 diff = toOrg - (t * ray.Direction);
             float dsq = Vector3.Dot(diff, diff);
@@ -31,12 +31,12 @@ namespace P
         public override Vector3 GetNormal(Ray ray)
         {
             Vector3 collisionPoint = ray.Origin + ray.Direction * ray.t;
-            return (collisionPoint - Origin).Normalized();
+            return (collisionPoint - Location).Normalized();
         }
 
         public Sphere(Vector3 Origin, float radius, Vector3 color) : base(color)
         {
-            this.Origin = Origin;
+            this.Location = Origin;
             this.radius = radius;
             radiusSq = radius * radius;
         }

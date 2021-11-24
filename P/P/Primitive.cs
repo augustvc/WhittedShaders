@@ -7,7 +7,7 @@ using OpenTK;
 
 namespace P
 {
-    class Primitive
+    abstract class Primitive
     {
         public Vector3 color = new Vector3(0f, 0.5f, 0f);
         static int primitiveCount;
