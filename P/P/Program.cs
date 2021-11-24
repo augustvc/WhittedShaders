@@ -34,6 +34,7 @@ namespace P
         RayTracer rayTracer;
         GPURayTracer gpuRayTracer;
 
+
         protected override void OnLoad(EventArgs e)
         {
             GL.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
@@ -83,7 +84,7 @@ namespace P
         void GPUFrame()
         {
             gpuRayTracer.GenTex(Width, Height);
-            
+
             shader.Use();
             GL.Clear(ClearBufferMask.ColorBufferBit);
             GL.DrawArrays(PrimitiveType.Quads, 0, 4);
@@ -126,25 +127,41 @@ namespace P
         bool newYPress = true;
         protected override void OnUpdateFrame(FrameEventArgs e)
         {
+
+            //Keyboard Movement
+
             KeyboardState ks = Keyboard.GetState();
-            
-            if(ks.IsKeyDown(Key.Escape))
+
+            if (ks.IsKeyDown(Key.Escape))
             {
                 Exit();
             }
 
-            if(ks.IsKeyDown(Key.Y)) {
+            if (ks.IsKeyDown(Key.Y))
+            {
                 if (newYPress)
                 {
                     useGPU = !useGPU;
                     newYPress = false;
                 }
-            } else
+            }
+            else
             {
                 newYPress = true;
             }
 
+            Camera.OnUpdateFrame(e);
+            Console.WriteLine("camera called");
+
             base.OnUpdateFrame(e);
+        }
+
+        protected override void OnMouseMove(MouseMoveEventArgs e)
+        {
+
+            Camera.OnMouseMove(e, this);
+
+            base.OnMouseMove(e);
         }
 
         public Game(int width, int height, string title) : base(width, height, GraphicsMode.Default, title) { }

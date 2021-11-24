@@ -47,6 +47,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Camera.cs" />
     <Compile Include="GPURayTracer.cs" />
     <Compile Include="Primitive.cs" />
     <Compile Include="Program.cs" />
