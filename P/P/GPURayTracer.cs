@@ -17,7 +17,7 @@ namespace P
         int shadingProgram;
         int[] raySSBOs = { -1, -1 };
         int shadowRaySSBO = -1;
-        int[] rayCounterBOs = { -1, -1, -1 };
+        int rayCounterBO = -1;
         int width = 1;
         int height = 1;
         int textureHandle = -1;
@@ -48,7 +48,7 @@ namespace P
 
                 GL.BindBuffer(BufferTarget.ShaderStorageBuffer, raySSBOs[i]);
                 GL.BufferData(BufferTarget.ShaderStorageBuffer,
-                    (1 + width * height) * (Vector4.SizeInBytes * 30), IntPtr.Zero, BufferUsageHint.StaticDraw);
+                    (1 + width * height) * (Vector4.SizeInBytes * 20), IntPtr.Zero, BufferUsageHint.StaticDraw);
                 GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 1 + i, raySSBOs[i]);
             }
             if (shadowRaySSBO != -1) { GL.DeleteBuffer(shadowRaySSBO); }
@@ -56,7 +56,7 @@ namespace P
 
             GL.BindBuffer(BufferTarget.ShaderStorageBuffer, shadowRaySSBO);
             GL.BufferData(BufferTarget.ShaderStorageBuffer,
-               (1 + width * height) * (Vector4.SizeInBytes * 30), IntPtr.Zero, BufferUsageHint.StaticDraw);
+               (1 + width * height) * (Vector4.SizeInBytes * 20), IntPtr.Zero, BufferUsageHint.StaticDraw);
             GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 3, shadowRaySSBO);
 
             GL.UseProgram(shadingProgram);
@@ -80,20 +80,22 @@ namespace P
 
         void SetupAtomics()
         {
-            for(int i = 0; i < 3; i++)
-            if (rayCounterBOs[i] == -1)
+            if (rayCounterBO == -1)
             {
-                rayCounterBOs[i] = GL.GenBuffer();
+                rayCounterBO = GL.GenBuffer();
                 GL.UseProgram(generateProgram);
-                uint[] test = { 0 };
-                GL.BindBuffer(BufferTarget.AtomicCounterBuffer, rayCounterBOs[i]);
-                GL.BufferData(BufferTarget.AtomicCounterBuffer, sizeof(uint), test, BufferUsageHint.StaticDraw);
-                GL.BindBufferBase(BufferRangeTarget.AtomicCounterBuffer, 4 + i, rayCounterBOs[i]);
+                uint[] test = { 0, 0, 0, 0 };
+                GL.BindBuffer(BufferTarget.AtomicCounterBuffer, rayCounterBO);
+                GL.BufferData(BufferTarget.AtomicCounterBuffer, sizeof(uint) * 4, test, BufferUsageHint.StaticDraw);
+                GL.BindBufferBase(BufferRangeTarget.AtomicCounterBuffer, 4, rayCounterBO);
                 
                 GL.UseProgram(bruteFirstHitProgram);
-                GL.BindBuffer(BufferTarget.AtomicCounterBuffer, rayCounterBOs[i]);
-                GL.BufferData(BufferTarget.AtomicCounterBuffer, sizeof(uint), test, BufferUsageHint.StaticDraw);
-                GL.BindBufferBase(BufferRangeTarget.AtomicCounterBuffer, 4 + i, rayCounterBOs[i]);
+                GL.BindBuffer(BufferTarget.AtomicCounterBuffer, rayCounterBO);
+                GL.BindBufferBase(BufferRangeTarget.AtomicCounterBuffer, 4, rayCounterBO);
+
+                GL.UseProgram(shadingProgram);
+                GL.BindBuffer(BufferTarget.AtomicCounterBuffer, rayCounterBO);
+                GL.BindBufferBase(BufferRangeTarget.AtomicCounterBuffer, 4, rayCounterBO);
             }
         }
 
@@ -114,29 +116,9 @@ namespace P
             GL.Uniform3(GL.GetUniformLocation(generateProgram, "cameraOrigin"), cameraOrigin);
             //Console.WriteLine("Elapsed 2: " + sw.ElapsedMilliseconds);
 
-
-            GL.UseProgram(generateProgram);
-            for (int i = 0; i < 3; i++)
-            {
-                GL.BindBuffer(BufferTarget.AtomicCounterBuffer, rayCounterBOs[i]);
-                GL.BindBufferBase(BufferRangeTarget.AtomicCounterBuffer, 4 + i, rayCounterBOs[i]);
-                GL.BufferData(BufferTarget.AtomicCounterBuffer, sizeof(uint), new uint[] { 0 }, BufferUsageHint.StaticDraw);
-            }
-            GL.UseProgram(bruteFirstHitProgram);
-            for (int i = 0; i < 3; i++)
-            {
-                GL.BindBuffer(BufferTarget.AtomicCounterBuffer, rayCounterBOs[i]);
-                GL.BindBufferBase(BufferRangeTarget.AtomicCounterBuffer, 4 + i, rayCounterBOs[i]);
-                GL.BufferData(BufferTarget.AtomicCounterBuffer, sizeof(uint), new uint[] { 0 }, BufferUsageHint.StaticDraw);
-            }
-            GL.UseProgram(shadingProgram);
-            for (int i = 0; i < 3; i++)
-            {
-                GL.BindBuffer(BufferTarget.AtomicCounterBuffer, rayCounterBOs[i]);
-                GL.BindBufferBase(BufferRangeTarget.AtomicCounterBuffer, 4 + i, rayCounterBOs[i]);
-                GL.BufferData(BufferTarget.AtomicCounterBuffer, sizeof(uint), new uint[] { 0 }, BufferUsageHint.StaticDraw);
-            }
-
+            GL.BindBuffer(BufferTarget.AtomicCounterBuffer, rayCounterBO);
+            GL.BufferData(BufferTarget.AtomicCounterBuffer, sizeof(uint) * 4, new uint[] { 0, 0, 0, 0 }, BufferUsageHint.StaticDraw);
+ 
             int currentInBuffer = 0;
             //Console.WriteLine("Elapsed 3: " + sw.ElapsedMilliseconds);
 
@@ -149,14 +131,15 @@ namespace P
 
             //Console.WriteLine("Elapsed 4: " + sw.ElapsedMilliseconds);
 
-            int maximumBounces = 20;
+            int maximumBounces = 6;
             for (int i = 0; i < maximumBounces; i++)
             {
+                //Reset the shadow ray counter
                 GL.UseProgram(shadingProgram);
-                GL.BindBuffer(BufferTarget.AtomicCounterBuffer, rayCounterBOs[2]);
-                GL.BindBufferBase(BufferRangeTarget.AtomicCounterBuffer, 6, rayCounterBOs[2]);
-                GL.BufferData(BufferTarget.AtomicCounterBuffer, sizeof(uint), new uint[] { 0 }, BufferUsageHint.StaticDraw);
+                GL.BindBufferBase(BufferRangeTarget.AtomicCounterBuffer, 4, rayCounterBO);
+                GL.BufferSubData(BufferTarget.AtomicCounterBuffer, new IntPtr(sizeof(uint) * 2), sizeof(uint), new uint[] { 0 });
 
+                //Swap the in-ray buffer with the out-ray buffer:
                 GL.UseProgram(bruteFirstHitProgram);
                 GL.BindBuffer(BufferTarget.ShaderStorageBuffer, raySSBOs[currentInBuffer]);
                 GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 1, raySSBOs[currentInBuffer]);
@@ -164,21 +147,26 @@ namespace P
                 GL.BindBuffer(BufferTarget.ShaderStorageBuffer, raySSBOs[1 - currentInBuffer]);
                 GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 2, raySSBOs[1 - currentInBuffer]);
 
-                GL.BindBuffer(BufferTarget.AtomicCounterBuffer, rayCounterBOs[currentInBuffer]);
-                GL.BindBufferBase(BufferRangeTarget.AtomicCounterBuffer, 4, rayCounterBOs[currentInBuffer]);
+                //Reset the counter for the output buffer, so we can start filling it from 0:
+                GL.BufferSubData(BufferTarget.AtomicCounterBuffer, new IntPtr(sizeof(uint)), sizeof(uint), new uint[] { 0 });
 
-                GL.BindBuffer(BufferTarget.AtomicCounterBuffer, rayCounterBOs[1 - currentInBuffer]);
-                GL.BindBufferBase(BufferRangeTarget.AtomicCounterBuffer, 5, rayCounterBOs[1 - currentInBuffer]);
-                GL.BufferData(BufferTarget.AtomicCounterBuffer, sizeof(uint), new uint[] { 0 }, BufferUsageHint.StaticDraw);
-
+                //Run the programs
                 GL.DispatchCompute(262144 / 64, 1, 1);
                 GL.MemoryBarrier(MemoryBarrierFlags.ShaderStorageBarrierBit);
-
-                currentInBuffer = 1 - currentInBuffer;
 
                 GL.UseProgram(shadingProgram);
                 GL.DispatchCompute(262144 / 64, 1, 1);
                 GL.MemoryBarrier(MemoryBarrierFlags.ShaderStorageBarrierBit);
+
+                //Swap counters
+                GL.CopyBufferSubData(BufferTarget.AtomicCounterBuffer, BufferTarget.AtomicCounterBuffer,
+                    IntPtr.Zero, new IntPtr(sizeof(uint) * 3), sizeof(uint));
+                GL.CopyBufferSubData(BufferTarget.AtomicCounterBuffer, BufferTarget.AtomicCounterBuffer,
+                    new IntPtr(sizeof(uint)), IntPtr.Zero, sizeof(uint));
+                GL.CopyBufferSubData(BufferTarget.AtomicCounterBuffer, BufferTarget.AtomicCounterBuffer,
+                    new IntPtr(sizeof(uint) * 3), new IntPtr(sizeof(uint)), sizeof(uint));
+
+                currentInBuffer = 1 - currentInBuffer;
             }
             //Console.WriteLine("Elapsed 5: " + sw.ElapsedMilliseconds);
 
@@ -214,10 +202,7 @@ namespace P
                 GL.DeleteBuffer(raySSBOs[i]);
             }
             GL.DeleteBuffer(shadowRaySSBO);
-            for (int i = 0; i < 3; i++)
-            {
-                GL.DeleteBuffer(rayCounterBOs[i]);
-            }
+            GL.DeleteBuffer(rayCounterBO);
             GL.DeleteTexture(textureHandle);
             Dispose(true);
             GC.SuppressFinalize(this);

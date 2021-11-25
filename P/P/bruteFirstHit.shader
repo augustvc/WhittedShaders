@@ -32,8 +32,8 @@ layout(std430, binding = 2) buffer rayOutBuffer
 };
 
 layout(binding = 4) uniform atomic_uint rayCountIn;
-layout(binding = 5) uniform atomic_uint rayCountOut;
-layout(binding = 6) uniform atomic_uint shadowRayCount;
+layout(binding = 4, offset = 4) uniform atomic_uint rayCountOut;
+layout(binding = 4, offset = 8) uniform atomic_uint shadowRayCount;
 
 
 layout(std430, binding = 3) buffer shadowRayBuffer

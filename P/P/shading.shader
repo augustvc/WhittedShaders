@@ -17,7 +17,7 @@ layout(std430, binding = 3) buffer shadowRayBuffer
 	ShadowRay shadowRays[];
 };
 
-layout(binding = 6) uniform atomic_uint shadowRayCount;
+layout(binding = 4, offset = 8) uniform atomic_uint shadowRayCount;
 
 void main() {
 	ShadowRay ray;
