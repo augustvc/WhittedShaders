@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -16,11 +17,11 @@ namespace P
         int shadingProgram;
         int[] raySSBOs = { -1, -1 };
         int shadowRaySSBO = -1;
-        int rayCounterBO = -1;
+        int[] rayCounterBOs = { -1, -1, -1 };
         int width = 1;
         int height = 1;
         int textureHandle = -1;
-        Vector3 cameraOrigin = new Vector3(0.0f);
+        Vector3 cameraOrigin = new Vector3(0.0f, -1f, 11f);
 
         public GPURayTracer ()
         {
@@ -47,7 +48,7 @@ namespace P
 
                 GL.BindBuffer(BufferTarget.ShaderStorageBuffer, raySSBOs[i]);
                 GL.BufferData(BufferTarget.ShaderStorageBuffer,
-                    (1 + width * height) * (Vector4.SizeInBytes * 20), IntPtr.Zero, BufferUsageHint.StaticDraw);
+                    (1 + width * height) * (Vector4.SizeInBytes * 30), IntPtr.Zero, BufferUsageHint.StaticDraw);
                 GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 1 + i, raySSBOs[i]);
             }
             if (shadowRaySSBO != -1) { GL.DeleteBuffer(shadowRaySSBO); }
@@ -55,7 +56,7 @@ namespace P
 
             GL.BindBuffer(BufferTarget.ShaderStorageBuffer, shadowRaySSBO);
             GL.BufferData(BufferTarget.ShaderStorageBuffer,
-               (1 + width * height) * (Vector4.SizeInBytes * 20), IntPtr.Zero, BufferUsageHint.StaticDraw);
+               (1 + width * height) * (Vector4.SizeInBytes * 30), IntPtr.Zero, BufferUsageHint.StaticDraw);
             GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 3, shadowRaySSBO);
 
             GL.UseProgram(shadingProgram);
@@ -79,69 +80,110 @@ namespace P
 
         void SetupAtomics()
         {
-            if (rayCounterBO == -1)
+            for(int i = 0; i < 3; i++)
+            if (rayCounterBOs[i] == -1)
             {
-                rayCounterBO = GL.GenBuffer();
+                rayCounterBOs[i] = GL.GenBuffer();
+                GL.UseProgram(generateProgram);
+                uint[] test = { 0 };
+                GL.BindBuffer(BufferTarget.AtomicCounterBuffer, rayCounterBOs[i]);
+                GL.BufferData(BufferTarget.AtomicCounterBuffer, sizeof(uint), test, BufferUsageHint.StaticDraw);
+                GL.BindBufferBase(BufferRangeTarget.AtomicCounterBuffer, 4 + i, rayCounterBOs[i]);
+                
+                GL.UseProgram(bruteFirstHitProgram);
+                GL.BindBuffer(BufferTarget.AtomicCounterBuffer, rayCounterBOs[i]);
+                GL.BufferData(BufferTarget.AtomicCounterBuffer, sizeof(uint), test, BufferUsageHint.StaticDraw);
+                GL.BindBufferBase(BufferRangeTarget.AtomicCounterBuffer, 4 + i, rayCounterBOs[i]);
             }
-            GL.UseProgram(generateProgram);
-            uint[] test = { 0, 0, 0 };
-            GL.BindBuffer(BufferTarget.AtomicCounterBuffer, rayCounterBO);
-            GL.BufferData(BufferTarget.AtomicCounterBuffer, sizeof(uint) * 3, test, BufferUsageHint.StaticDraw);
-            GL.BindBufferBase(BufferRangeTarget.AtomicCounterBuffer, 4, rayCounterBO);
-
-            GL.UseProgram(bruteFirstHitProgram);
-            GL.BindBuffer(BufferTarget.AtomicCounterBuffer, rayCounterBO);
-            GL.BufferData(BufferTarget.AtomicCounterBuffer, sizeof(uint) * 3, test, BufferUsageHint.StaticDraw);
-            GL.BindBufferBase(BufferRangeTarget.AtomicCounterBuffer, 4, rayCounterBO);
         }
 
         public void GenTex(int width, int height)
         {
-            if(width != this.width || height != this.height)
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
+            if (width != this.width || height != this.height)
             {
                 SetupBuffers(width, height);
                 this.width = width;
                 this.height = height;
             }
+            GL.BindTexture(TextureTarget.Texture2D, textureHandle);
             GL.ClearTexImage(textureHandle, 0, PixelFormat.Rgba, PixelType.Float, IntPtr.Zero);
             GL.UseProgram(generateProgram);
+            //Console.WriteLine("Elapsed 1: " + sw.ElapsedMilliseconds);
             GL.Uniform3(GL.GetUniformLocation(generateProgram, "cameraOrigin"), cameraOrigin);
+            //Console.WriteLine("Elapsed 2: " + sw.ElapsedMilliseconds);
 
-            GL.BindBuffer(BufferTarget.AtomicCounterBuffer, rayCounterBO);
-            GL.BufferData(BufferTarget.AtomicCounterBuffer, sizeof(uint) * 3, new uint[] { 0, 0, 0 }, BufferUsageHint.StaticDraw);
-
-
-            int currentBuffer = 0;
 
             GL.UseProgram(generateProgram);
-            GL.BindBuffer(BufferTarget.ShaderStorageBuffer, raySSBOs[currentBuffer]);
-            GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 1, raySSBOs[currentBuffer]);
-
-            GL.DispatchCompute(width, height, 1);
-            GL.MemoryBarrier(MemoryBarrierFlags.ShaderStorageBarrierBit);
-
+            for (int i = 0; i < 3; i++)
+            {
+                GL.BindBuffer(BufferTarget.AtomicCounterBuffer, rayCounterBOs[i]);
+                GL.BindBufferBase(BufferRangeTarget.AtomicCounterBuffer, 4 + i, rayCounterBOs[i]);
+                GL.BufferData(BufferTarget.AtomicCounterBuffer, sizeof(uint), new uint[] { 0 }, BufferUsageHint.StaticDraw);
+            }
             GL.UseProgram(bruteFirstHitProgram);
             for (int i = 0; i < 3; i++)
             {
-                GL.BindBuffer(BufferTarget.ShaderStorageBuffer, raySSBOs[currentBuffer]);
-                GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 1, raySSBOs[currentBuffer]);
-
-                GL.BindBuffer(BufferTarget.ShaderStorageBuffer, raySSBOs[1 - currentBuffer]);
-                GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 2, raySSBOs[1 - currentBuffer]);
-
-                //int cid = GL.GetUniformLocation(bruteFirstHitProgram, "counterid");
-                //GL.Uniform1(cid, 0);                
-
-                GL.DispatchCompute(262144, 1, 1);
-                GL.MemoryBarrier(MemoryBarrierFlags.ShaderStorageBarrierBit);
-
-                GL.BufferSubData(BufferTarget.AtomicCounterBuffer, new IntPtr(sizeof(uint) * currentBuffer), sizeof(uint), new uint[] { 0 });
-                currentBuffer = 1 - currentBuffer;
+                GL.BindBuffer(BufferTarget.AtomicCounterBuffer, rayCounterBOs[i]);
+                GL.BindBufferBase(BufferRangeTarget.AtomicCounterBuffer, 4 + i, rayCounterBOs[i]);
+                GL.BufferData(BufferTarget.AtomicCounterBuffer, sizeof(uint), new uint[] { 0 }, BufferUsageHint.StaticDraw);
+            }
+            GL.UseProgram(shadingProgram);
+            for (int i = 0; i < 3; i++)
+            {
+                GL.BindBuffer(BufferTarget.AtomicCounterBuffer, rayCounterBOs[i]);
+                GL.BindBufferBase(BufferRangeTarget.AtomicCounterBuffer, 4 + i, rayCounterBOs[i]);
+                GL.BufferData(BufferTarget.AtomicCounterBuffer, sizeof(uint), new uint[] { 0 }, BufferUsageHint.StaticDraw);
             }
 
-            GL.UseProgram(shadingProgram);
-            GL.DispatchCompute(262144, 1, 1);
+            int currentInBuffer = 0;
+            //Console.WriteLine("Elapsed 3: " + sw.ElapsedMilliseconds);
+
+            GL.UseProgram(generateProgram);
+            GL.BindBuffer(BufferTarget.ShaderStorageBuffer, raySSBOs[currentInBuffer]);
+            GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 1, raySSBOs[currentInBuffer]);
+
+            GL.DispatchCompute(width / 1, height, 1);
             GL.MemoryBarrier(MemoryBarrierFlags.ShaderStorageBarrierBit);
+
+            //Console.WriteLine("Elapsed 4: " + sw.ElapsedMilliseconds);
+
+            int maximumBounces = 20;
+            for (int i = 0; i < maximumBounces; i++)
+            {
+                GL.UseProgram(shadingProgram);
+                GL.BindBuffer(BufferTarget.AtomicCounterBuffer, rayCounterBOs[2]);
+                GL.BindBufferBase(BufferRangeTarget.AtomicCounterBuffer, 6, rayCounterBOs[2]);
+                GL.BufferData(BufferTarget.AtomicCounterBuffer, sizeof(uint), new uint[] { 0 }, BufferUsageHint.StaticDraw);
+
+                GL.UseProgram(bruteFirstHitProgram);
+                GL.BindBuffer(BufferTarget.ShaderStorageBuffer, raySSBOs[currentInBuffer]);
+                GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 1, raySSBOs[currentInBuffer]);
+
+                GL.BindBuffer(BufferTarget.ShaderStorageBuffer, raySSBOs[1 - currentInBuffer]);
+                GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 2, raySSBOs[1 - currentInBuffer]);
+
+                GL.BindBuffer(BufferTarget.AtomicCounterBuffer, rayCounterBOs[currentInBuffer]);
+                GL.BindBufferBase(BufferRangeTarget.AtomicCounterBuffer, 4, rayCounterBOs[currentInBuffer]);
+
+                GL.BindBuffer(BufferTarget.AtomicCounterBuffer, rayCounterBOs[1 - currentInBuffer]);
+                GL.BindBufferBase(BufferRangeTarget.AtomicCounterBuffer, 5, rayCounterBOs[1 - currentInBuffer]);
+                GL.BufferData(BufferTarget.AtomicCounterBuffer, sizeof(uint), new uint[] { 0 }, BufferUsageHint.StaticDraw);
+
+                GL.DispatchCompute(262144 / 64, 1, 1);
+                GL.MemoryBarrier(MemoryBarrierFlags.ShaderStorageBarrierBit);
+
+                currentInBuffer = 1 - currentInBuffer;
+
+                GL.UseProgram(shadingProgram);
+                GL.DispatchCompute(262144 / 64, 1, 1);
+                GL.MemoryBarrier(MemoryBarrierFlags.ShaderStorageBarrierBit);
+            }
+            //Console.WriteLine("Elapsed 5: " + sw.ElapsedMilliseconds);
+
+            sw.Stop();
+            //Console.WriteLine("Elapsed final: " + sw.ElapsedMilliseconds);
         }
 
         private bool disposedValue = false;
@@ -172,7 +214,10 @@ namespace P
                 GL.DeleteBuffer(raySSBOs[i]);
             }
             GL.DeleteBuffer(shadowRaySSBO);
-            GL.DeleteBuffer(rayCounterBO);
+            for (int i = 0; i < 3; i++)
+            {
+                GL.DeleteBuffer(rayCounterBOs[i]);
+            }
             GL.DeleteTexture(textureHandle);
             Dispose(true);
             GC.SuppressFinalize(this);
