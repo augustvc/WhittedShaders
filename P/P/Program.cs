@@ -12,12 +12,15 @@ namespace P
 {
     class Game : GameWindow
     {
+        double renderCheckTime = 2.0;
+        double renderCheckInterval = 2.0;
+
         bool useGPU = true;
         static void Main(string[] args)
         {
-            using (Game game = new Game(800, 600, "GPU Ray Tracer"))
+            using (Game game = new Game(1280, 800, "GPU Ray Tracer"))
             {
-                game.Run(60.0);
+                game.Run(0.0);
             }
         }
 
@@ -76,6 +79,13 @@ namespace P
             else
             {
                 CPUFrame();
+            }
+            renderCheckTime -= e.Time;
+            if(renderCheckTime < 0.0)
+            {
+                Console.WriteLine("Render time: " + RenderTime);
+                Console.WriteLine("Render fps: " + RenderFrequency);
+                renderCheckTime = renderCheckInterval;
             }
             base.OnRenderFrame(e);
         }
@@ -149,6 +159,23 @@ namespace P
             } else
             {
                 newYPress = true;
+            }
+
+            if(ks.IsKeyDown(Key.W))
+            {
+                gpuRayTracer.updateCamera(new Vector3(0.0f, 0.0f, 3.0f) * (float)e.Time);
+            }
+            if (ks.IsKeyDown(Key.A))
+            {
+                gpuRayTracer.updateCamera(new Vector3(-3f, 0.0f, 0.0f) * (float)e.Time);
+            }
+            if (ks.IsKeyDown(Key.S))
+            {
+                gpuRayTracer.updateCamera(new Vector3(0.0f, 0.0f, -3f) * (float)e.Time);
+            }
+            if (ks.IsKeyDown(Key.D))
+            {
+                gpuRayTracer.updateCamera(new Vector3(3f, 0.0f, 0.0f) * (float)e.Time);
             }
 
             base.OnUpdateFrame(e);

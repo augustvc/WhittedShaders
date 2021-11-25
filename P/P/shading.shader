@@ -26,18 +26,22 @@ layout(std430, binding = 3) buffer shadowRayBuffer
 	ShadowRay shadowRays[];
 };
 
-layout(binding = 4) uniform atomic_uint shadowRayCount;
+layout(binding = 4, offset = 8) uniform atomic_uint shadowRayCount;
 
 void main() {
-	//int iter = 0;
 	ShadowRay ray;
-	//uint totalRays = atomicCounter(shadowRayCount);
-	//while (gl_GlobalInvocationID.x + iter * 524288 < totalRays) {
-	ray = shadowRays[gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * gl_NumWorkGroups.x];
-	vec4 pixel = vec4(ray.energy, 1.0);
 
-	ivec2 pixel_coords = ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y);
-	imageStore(img_output, pixel_coords, pixel);
-	//iter++;
-	//}
+	uint lastShadowRayID = atomicCounter(shadowRayCount);
+
+	uint totalRays = atomicCounter(shadowRayCount);
+	uint iter = 0;
+	while (gl_GlobalInvocationID.x + (iter * 262144) < totalRays) {
+		ray = shadowRays[gl_GlobalInvocationID.x + (iter * 262144)];
+		vec4 pixel = vec4(ray.energy, 1.0);
+
+		ivec2 pixel_coords = ivec2(ray.pixelX, ray.pixelY);
+		vec4 clr = imageLoad(img_output, pixel_coords);
+		imageStore(img_output, pixel_coords, clr + pixel);
+		iter++;
+	}
 }
