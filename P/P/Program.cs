@@ -13,13 +13,13 @@ namespace P
     class Game : GameWindow
     {
         double renderCheckTime = 2.0;
-        double renderCheckInterval = 2.0;
+        double renderCheckInterval = 15.0;
 
         bool useGPU = true;
         static void Main(string[] args)
         {
 
-            using (Game game = new Game(1280, 800, "GPU Ray Tracer"))
+            using (Game game = new Game(500, 500, "GPU Ray Tracer"))
 
 
 
@@ -86,8 +86,9 @@ namespace P
                 CPUFrame();
             }
             renderCheckTime -= e.Time;
-            if(renderCheckTime < 0.0)
+            if (renderCheckTime < 0.0)
             {
+
                 Console.WriteLine("Render time: " + RenderTime);
                 Console.WriteLine("Render fps: " + RenderFrequency);
                 renderCheckTime = renderCheckInterval;
@@ -160,7 +161,8 @@ namespace P
                     if (useGPU)
                     {
                         Title = "GPU Ray Tracer";
-                    } else
+                    }
+                    else
                     {
                         Title = "CPU Ray Tracer";
                     }
@@ -173,7 +175,7 @@ namespace P
 
 
             Camera.OnUpdateFrame(e);
-            Console.WriteLine("camera called");
+
 
 
             base.OnUpdateFrame(e);

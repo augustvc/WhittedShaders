@@ -19,7 +19,7 @@ public static class Camera
     static bool Focused = true;
 
     static Vector2 lastPos = new Vector2(0.0f, 0.0f);
-    static float sensitivity = 0.01f;
+    static float sensitivity = 0.1f;
     static float pitch = 0.0f;
     static float yaw = 90.0f;
 
@@ -69,37 +69,33 @@ public static class Camera
         KeyboardState input = Keyboard.GetState();
         if (input.IsKeyDown(Key.D))
         {
-            Console.WriteLine("Key pressed");
+
             cameraPosition += cameraRight * cameraSpeed; //Forward 
         }
 
         if (input.IsKeyDown(Key.A))
         {
-            Console.WriteLine("Key pressed");
+
             cameraPosition -= cameraRight * cameraSpeed; //Backwards
         }
 
         if (input.IsKeyDown(Key.S))
         {
-            Console.WriteLine("Key pressed");
             cameraPosition -= cameraFront * cameraSpeed; //Left
         }
 
         if (input.IsKeyDown(Key.W))
         {
-            Console.WriteLine("Key pressed");
             cameraPosition += cameraFront * cameraSpeed; //Right
         }
 
         if (input.IsKeyDown(Key.Space))
         {
-            Console.WriteLine("Key pressed");
             cameraPosition += up * cameraSpeed; //Up 
         }
 
         if (input.IsKeyDown(Key.LShift))
         {
-            Console.WriteLine("Key pressed");
             cameraPosition -= up * cameraSpeed; //Down
         }
 
@@ -110,34 +106,7 @@ public static class Camera
 
 
 
-        if (pitch > 89.0f)
-        {
-            pitch = 89.0f;
-        }
-        else if (pitch < -89.0f)
-        {
-            pitch = -89.0f;
-        }
 
-
-
-        cameraFront.X = (float)Math.Cos(MathHelper.DegreesToRadians(pitch)) * (float)Math.Cos(MathHelper.DegreesToRadians(yaw));
-        cameraFront.Y = (float)Math.Sin(MathHelper.DegreesToRadians(pitch));
-        cameraFront.Z = (float)Math.Cos(MathHelper.DegreesToRadians(pitch)) * (float)Math.Sin(MathHelper.DegreesToRadians(yaw));
-        cameraFront = Vector3.Normalize(cameraFront);
-
-        cameraRight.X = (float)Math.Cos(MathHelper.DegreesToRadians(pitch)) * (float)Math.Cos(MathHelper.DegreesToRadians(yaw - 90));
-        cameraRight.Y = (float)Math.Sin(MathHelper.DegreesToRadians(pitch));
-        cameraRight.Z = (float)Math.Cos(MathHelper.DegreesToRadians(pitch)) * (float)Math.Sin(MathHelper.DegreesToRadians(yaw - 90));
-        cameraRight = Vector3.Normalize(cameraRight);
-
-        cameraUp.X = (float)Math.Cos(MathHelper.DegreesToRadians(pitch + 90)) * (float)Math.Cos(MathHelper.DegreesToRadians(yaw));
-        cameraUp.Y = (float)Math.Sin(MathHelper.DegreesToRadians(pitch + 90));
-        cameraUp.Z = (float)Math.Cos(MathHelper.DegreesToRadians(pitch + 90)) * (float)Math.Sin(MathHelper.DegreesToRadians(yaw));
-        cameraUp = Vector3.Normalize(cameraUp);
-
-        Console.WriteLine(pitch);
-        Console.WriteLine(yaw);
 
 
 
@@ -165,12 +134,44 @@ public static class Camera
                 pitch += deltaY * sensitivity;
                 yaw += deltaX * sensitivity;
 
+                if (pitch > 89.0f)
+                {
+                    pitch = 89.0f;
+                }
+                else if (pitch < -89.0f)
+                {
+                    pitch = -89.0f;
+                }
+
+
+
+                cameraFront.X = (float)Math.Cos(MathHelper.DegreesToRadians(pitch)) * (float)Math.Cos(MathHelper.DegreesToRadians(yaw));
+                cameraFront.Y = (float)Math.Sin(MathHelper.DegreesToRadians(pitch));
+                cameraFront.Z = (float)Math.Cos(MathHelper.DegreesToRadians(pitch)) * (float)Math.Sin(MathHelper.DegreesToRadians(yaw));
+                cameraFront = Vector3.Normalize(cameraFront);
+
+                cameraRight.X = (float)Math.Cos(MathHelper.DegreesToRadians(pitch)) * (float)Math.Cos(MathHelper.DegreesToRadians(yaw - 90));
+                cameraRight.Y = (float)Math.Sin(MathHelper.DegreesToRadians(pitch));
+                cameraRight.Z = (float)Math.Cos(MathHelper.DegreesToRadians(pitch)) * (float)Math.Sin(MathHelper.DegreesToRadians(yaw - 90));
+                cameraRight = Vector3.Normalize(cameraRight);
+
+                cameraUp.X = (float)Math.Cos(MathHelper.DegreesToRadians(pitch + 90)) * (float)Math.Cos(MathHelper.DegreesToRadians(yaw));
+                cameraUp.Y = (float)Math.Sin(MathHelper.DegreesToRadians(pitch + 90));
+                cameraUp.Z = (float)Math.Cos(MathHelper.DegreesToRadians(pitch + 90)) * (float)Math.Sin(MathHelper.DegreesToRadians(yaw));
+                cameraUp = Vector3.Normalize(cameraUp);
+                Console.WriteLine("============================");
+
+                Console.WriteLine(cameraFront);
+                Console.WriteLine(cameraRight);
+                Console.WriteLine(cameraUp);
             }
 
 
         }
         prevX = ms.X;
         prevY = ms.Y;
+
+
 
 
     }
@@ -189,7 +190,6 @@ public static class Camera
         {
             _fov -= e.DeltaPrecise;
         }
-        Console.WriteLine("the fov has changed");
 
     }
 

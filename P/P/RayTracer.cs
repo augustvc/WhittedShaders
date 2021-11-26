@@ -41,7 +41,7 @@ namespace P
             yArm *= (float)height / (float)width;
 
             int index = 0;
-            Console.WriteLine(ViewDirection);
+
             for (int y = 0; y < height; y++)
             {
                 for (int x = 0; x < width; x++)
