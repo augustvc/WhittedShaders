@@ -48,7 +48,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="GPURayTracer.cs" />
+    <Compile Include="GPURayTracer\GPURayTracer.cs" />
     <Compile Include="Light.cs" />
     <Compile Include="Primitive.cs" />
     <Compile Include="Program.cs" />
@@ -60,13 +60,13 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
-    <None Include="bruteFirstHit.shader" />
-    <None Include="generate.shader" />
+    <None Include="GPURayTracer\bruteFirstHit.shader" />
+    <None Include="GPURayTracer\generate.shader" />
     <None Include="OpenTK.dll.config" />
     <None Include="packages.config" />
     <None Include="shader.frag" />
     <None Include="shader.vert" />
-    <None Include="shading.shader" />
+    <None Include="GPURayTracer\shading.shader" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

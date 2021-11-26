@@ -25,9 +25,9 @@ namespace P
 
         public GPURayTracer ()
         {
-            generateProgram = Shader.CreateComputeShaderProgram("../../generate.shader");
-            bruteFirstHitProgram = Shader.CreateComputeShaderProgram("../../bruteFirstHit.shader");
-            shadingProgram = Shader.CreateComputeShaderProgram("../../shading.shader");
+            generateProgram = Shader.CreateComputeShaderProgram("../../GPURayTracer/generate.shader");
+            bruteFirstHitProgram = Shader.CreateComputeShaderProgram("../../GPURayTracer/bruteFirstHit.shader");
+            shadingProgram = Shader.CreateComputeShaderProgram("../../GPURayTracer/shading.shader");
 
             SetupBuffers(width, height);
         }
