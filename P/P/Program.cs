@@ -15,7 +15,7 @@ namespace P
         bool useGPU = true;
         static void Main(string[] args)
         {
-            using (Game game = new Game(800, 600, "Ray Tracer"))
+            using (Game game = new Game(1000, 1000, "Ray Tracer"))
             {
                 game.Run(60.0);
             }

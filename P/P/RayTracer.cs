@@ -23,18 +23,21 @@ namespace P
 
             //Hardcoded camera
             Vector3 cameraPosition = Camera.getCameraPosition();
-            Vector3 ViewDirection = Camera.getCameraTarget();
+            Vector3 ViewDirection = Camera.getCameraFront();
+            Vector3 cameraRight = Camera.getCameraRight();
+            Vector3 cameraUp = Camera.getCameraUp();
+
             float screenDistance = 2f;
             Vector3 ScreenCenter = cameraPosition + ViewDirection * screenDistance;
-            Vector3 BottomLeft = ScreenCenter + new Vector3(-1, -1, 0);
-            Vector3 BottomRight = ScreenCenter + new Vector3(1, -1, 0);
-            Vector3 TopLeft = ScreenCenter + new Vector3(-1, 1, 0);
+            Vector3 BottomLeft = ScreenCenter - cameraUp - cameraRight;
+            Vector3 BottomRight = ScreenCenter - cameraUp + cameraRight;
+            Vector3 TopLeft = ScreenCenter - cameraRight + cameraUp;
 
             Vector3 xArm = BottomRight - BottomLeft;
             Vector3 yArm = TopLeft - BottomLeft;
 
             int index = 0;
-            Console.WriteLine(cameraPosition);
+            Console.WriteLine(ViewDirection);
             for (int y = 0; y < height; y++)
             {
                 for (int x = 0; x < width; x++)
