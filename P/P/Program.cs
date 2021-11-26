@@ -18,7 +18,11 @@ namespace P
         bool useGPU = true;
         static void Main(string[] args)
         {
+
             using (Game game = new Game(1280, 800, "GPU Ray Tracer"))
+
+
+
             {
                 game.Run(0.0);
             }
@@ -36,6 +40,7 @@ namespace P
         Shader shader;
         RayTracer rayTracer;
         GPURayTracer gpuRayTracer;
+
 
         protected override void OnLoad(EventArgs e)
         {
@@ -93,7 +98,7 @@ namespace P
         void GPUFrame()
         {
             gpuRayTracer.GenTex(Width, Height);
-            
+
             shader.Use();
             GL.Clear(ClearBufferMask.ColorBufferBit);
             GL.DrawArrays(PrimitiveType.Quads, 0, 4);
@@ -136,14 +141,18 @@ namespace P
         bool newYPress = true;
         protected override void OnUpdateFrame(FrameEventArgs e)
         {
+
+            //Keyboard Movement
+
             KeyboardState ks = Keyboard.GetState();
-            
-            if(ks.IsKeyDown(Key.Escape))
+
+            if (ks.IsKeyDown(Key.Escape))
             {
                 Exit();
             }
 
-            if(ks.IsKeyDown(Key.Y)) {
+            if (ks.IsKeyDown(Key.Y))
+            {
                 if (newYPress)
                 {
                     useGPU = !useGPU;
@@ -156,29 +165,26 @@ namespace P
                         Title = "CPU Ray Tracer";
                     }
                 }
-            } else
+            }
+            else
             {
                 newYPress = true;
             }
 
-            if(ks.IsKeyDown(Key.W))
-            {
-                gpuRayTracer.updateCamera(new Vector3(0.0f, 0.0f, 3.0f) * (float)e.Time);
-            }
-            if (ks.IsKeyDown(Key.A))
-            {
-                gpuRayTracer.updateCamera(new Vector3(-3f, 0.0f, 0.0f) * (float)e.Time);
-            }
-            if (ks.IsKeyDown(Key.S))
-            {
-                gpuRayTracer.updateCamera(new Vector3(0.0f, 0.0f, -3f) * (float)e.Time);
-            }
-            if (ks.IsKeyDown(Key.D))
-            {
-                gpuRayTracer.updateCamera(new Vector3(3f, 0.0f, 0.0f) * (float)e.Time);
-            }
+
+            Camera.OnUpdateFrame(e);
+            Console.WriteLine("camera called");
+
 
             base.OnUpdateFrame(e);
+        }
+
+        protected override void OnMouseMove(MouseMoveEventArgs e)
+        {
+
+            Camera.OnMouseMove(e, this);
+
+            base.OnMouseMove(e);
         }
 
         public Game(int width, int height, string title) : base(width, height, GraphicsMode.Default, title) { }
