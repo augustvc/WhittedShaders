@@ -91,15 +91,18 @@ namespace P
             Dispose(true);
             GC.SuppressFinalize(this);
         }
-        public static int CreateComputeShaderProgram(string path)
+        public static int CreateComputeShaderProgram(string versionString, string[] paths)
         {
             int programHandle = GL.CreateProgram();
 
             int shaderHandle = GL.CreateShader(ShaderType.ComputeShader);
-            string shaderSrc;
-            using (StreamReader reader = new StreamReader(path, Encoding.UTF8))
+            string shaderSrc = versionString + "\n";
+            for (int i = 0; i < paths.Length; i++)
             {
-                shaderSrc = reader.ReadToEnd();
+                using (StreamReader reader = new StreamReader(paths[i], Encoding.UTF8))
+                {
+                    shaderSrc += reader.ReadToEnd();
+                }
             }
             GL.ShaderSource(shaderHandle, shaderSrc);
             GL.CompileShader(shaderHandle);
@@ -107,7 +110,11 @@ namespace P
             string log = GL.GetShaderInfoLog(shaderHandle);
             if (log != String.Empty)
             {
-                Console.WriteLine("Error when compiling " + path);
+                Console.WriteLine("Error when compiling combination of shader with version " + versionString + " followed by");
+                for (int i = 0; i < paths.Length; i++)
+                {
+                    Console.WriteLine(paths[i]);
+                }
                 Console.WriteLine(log);
             }
 

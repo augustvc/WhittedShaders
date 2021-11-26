@@ -1,5 +1,4 @@
-﻿#version 430
-layout(local_size_x = 64, local_size_y = 1) in;
+﻿layout(local_size_x = 64, local_size_y = 1) in;
 layout(rgba32f, binding = 0) uniform image2D img_output;
 
 struct ShadowRay

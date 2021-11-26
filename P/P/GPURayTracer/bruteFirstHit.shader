@@ -1,15 +1,4 @@
-﻿#version 430
-layout(local_size_x = 64, local_size_y = 1) in;
-
-struct Ray
-{
-	vec3 origin;
-	vec3 dir;
-	vec3 mul;
-	float t;
-	uint pixelX;
-	uint pixelY;
-};
+﻿layout(local_size_x = 64, local_size_y = 1) in;
 
 struct ShadowRay
 {
@@ -21,10 +10,6 @@ struct ShadowRay
 	uint pixelY;
 };
 
-layout(std430, binding = 1) buffer rayInBuffer
-{
-	Ray rays[];
-};
 
 layout(std430, binding = 2) buffer rayOutBuffer
 {
@@ -41,43 +26,6 @@ layout(std430, binding = 3) buffer shadowRayBuffer
 	ShadowRay shadowRays[];
 };
 
-struct Material
-{
-	vec3 color;
-	float diffuse;
-	float specular;
-};
-
-struct Sphere
-{
-	vec3 position;
-	Material mat;
-	float r2;
-};
-
-struct Light
-{
-	vec3 position;
-	vec3 brightness;
-};
-
-Sphere spheres[] = Sphere[](
-	  Sphere(vec3(-3.0, -1.5, 12.0), Material(vec3(1.0, 0.0, 0.0), 1.0, 0.0), 1.5 * 1.5)
-	, Sphere(vec3(3.0, -1.5, 12.0), Material(vec3(1.0, 0.0, 0.0), 1.0, 0.0), 1.5 * 1.5)
-	, Sphere(vec3(0.0, -1.5, 16.0), Material(vec3(0.0, 0.0, 1.0), 0.3, 0.7), 2)
-);
-
-struct Plane
-{
-	vec3 normal;
-	float offset;
-	Material mat;
-};
-
-Plane planes[] = Plane[](
-	Plane(vec3(0.0, 1.0, 0.0), -3.0, Material(vec3(0.0, 1.0, 0.0), 1.0, 0.0))
-);
-
 //Light lights[] = Light[](
 	//  Light(vec3(0.0, 12.0, 0.0), vec3(156.0, 156.0, 156.0))
 	//, Light(vec3(0.0, -8.0, 0.0), vec3(2.0, 0.0, 16.0))
@@ -86,8 +34,6 @@ Plane planes[] = Plane[](
 vec3 lightPosition = vec3(0.0, 12.0, 0.0);
 vec3 lightValue = vec3(70.0, 70.0, 70.0);
 
-uint counterid = 0;
-
 void main() {
 	uint iter = 0;
 	uint totalRays = atomicCounter(rayCountIn);
@@ -95,58 +41,23 @@ void main() {
 		uint rayNum = gl_GlobalInvocationID.x + (iter * 262144);
 		iter++;
 
-		int primID = -1;
-		vec3 normal = vec3(0.0);
-		for (int i = 0; i < spheres.length(); i++) {
-			Sphere sphere = spheres[i];
-
-			vec3 C = sphere.position - rays[rayNum].origin;
-			float t = dot(C, rays[rayNum].dir);
-			vec3 Q = C - (t * rays[rayNum].dir);
-			float dsq = dot(Q, Q);
-
-			if (dsq > sphere.r2)
-				continue;
-			t -= sqrt(sphere.r2 - dsq);
-
-			if (t < 0) continue;
-			if (t > rays[rayNum].t) continue;
-			rays[rayNum].t = t;
-			normal = normalize((rays[rayNum].origin + rays[rayNum].dir * t) - sphere.position);
-			primID = i;
-		}
-
-		for (int i = 0; i < planes.length(); i++) {
-			Plane plane = planes[i];
-
-			float denom = dot(-plane.normal, rays[rayNum].dir);
-			if (denom > 0.0001) {
-				vec3 planeOrigin = plane.normal * plane.offset;
-				vec3 diff = planeOrigin - rays[rayNum].origin;
-				float t = dot(diff, -plane.normal) / denom;
-				if (t < 0) {
-					continue;
-				}
-				if (t > rays[rayNum].t) {
-					continue;
-				}
-				rays[rayNum].t = t;
-				primID = 10000 + i;
-				normal = plane.normal;
-			}
-		}
+		int primID = intersect(rayNum);
+		
 
 		if (primID < 0) {
 			continue;
 		}
 
 		
+		vec3 normal = vec3(0.0);
 		Material mat = Material(vec3(0.0), 1.0, 0.0);
 		if (primID >= 10000) {
 			mat = planes[primID - 10000].mat;
+			normal = planes[primID - 10000].normal;
 		}
 		else {
 			mat = spheres[primID].mat;
+			normal = normalize((rays[rayNum].origin + rays[rayNum].dir * rays[rayNum].t) - spheres[primID].position);
 		}
 
 		if (mat.specular > 0.0) {
@@ -178,3 +89,6 @@ void main() {
 		}
 	}
 }
+
+/*
+*/

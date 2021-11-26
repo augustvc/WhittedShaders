@@ -1,5 +1,4 @@
-﻿#version 460
-layout(local_size_x = 1, local_size_y = 1) in;
+﻿layout(local_size_x = 1, local_size_y = 1) in;
 
 struct Ray
 {
@@ -28,7 +27,8 @@ vec3 yArm = p3 - p1;
 
 void main() {
 	yArm *= float(gl_NumWorkGroups.y * gl_WorkGroupSize.y) / float(gl_NumWorkGroups.x * gl_WorkGroupSize.x);
-	rays[atomicCounterIncrement(rayCountIn)] = Ray(cameraOrigin,
+	rays[atomicCounterIncrement(rayCountIn)] = Ray(
+		cameraOrigin,
 		normalize(
 		p1 +
 		xArm * (float(gl_GlobalInvocationID.x) / float(gl_NumWorkGroups.x * gl_WorkGroupSize.x)) +

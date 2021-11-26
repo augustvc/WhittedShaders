@@ -25,9 +25,9 @@ namespace P
 
         public GPURayTracer ()
         {
-            generateProgram = Shader.CreateComputeShaderProgram("../../GPURayTracer/generate.shader");
-            bruteFirstHitProgram = Shader.CreateComputeShaderProgram("../../GPURayTracer/bruteFirstHit.shader");
-            shadingProgram = Shader.CreateComputeShaderProgram("../../GPURayTracer/shading.shader");
+            generateProgram = Shader.CreateComputeShaderProgram("#version 460", new string[] { "../../GPURayTracer/generate.shader" });
+            bruteFirstHitProgram = Shader.CreateComputeShaderProgram("#version 430", new string[] { "../../GPURayTracer/intersect.shader", "../../GPURayTracer/bruteFirstHit.shader" });
+            shadingProgram = Shader.CreateComputeShaderProgram("#version 430", new string[] { "../../GPURayTracer/intersect.shader", "../../GPURayTracer/shading.shader" });
 
             SetupBuffers(width, height);
         }
@@ -126,7 +126,7 @@ namespace P
             GL.BindBuffer(BufferTarget.ShaderStorageBuffer, raySSBOs[currentInBuffer]);
             GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 1, raySSBOs[currentInBuffer]);
 
-            GL.DispatchCompute(width / 1, height, 1);
+            GL.DispatchCompute(width, height, 1);
             GL.MemoryBarrier(MemoryBarrierFlags.ShaderStorageBarrierBit);
 
             //Console.WriteLine("Elapsed 4: " + sw.ElapsedMilliseconds);
