@@ -21,20 +21,15 @@ namespace P
         int width = 1;
         int height = 1;
         int textureHandle = -1;
-        Vector3 cameraOrigin = new Vector3(0.0f, -1f, 11f);
+        int samplesSqrt = 2;
 
         public GPURayTracer ()
         {
-            generateProgram = Shader.CreateComputeShaderProgram("#version 460", new string[] { "../../GPURayTracer/generate.shader" });
-            bruteFirstHitProgram = Shader.CreateComputeShaderProgram("#version 430", new string[] { "../../GPURayTracer/intersect.shader", "../../GPURayTracer/bruteFirstHit.shader" });
-            shadingProgram = Shader.CreateComputeShaderProgram("#version 430", new string[] { "../../GPURayTracer/intersect.shader", "../../GPURayTracer/shading.shader" });
+            generateProgram = Shader.CreateComputeShaderProgram("#version 460", new string[] { "GPURayTracer/generate.shader" });
+            bruteFirstHitProgram = Shader.CreateComputeShaderProgram("#version 430", new string[] { "GPURayTracer/intersect.shader", "GPURayTracer/bruteFirstHit.shader" });
+            shadingProgram = Shader.CreateComputeShaderProgram("#version 430", new string[] { "GPURayTracer/intersect.shader", "GPURayTracer/shading.shader" });
 
             SetupBuffers(width, height);
-        }
-
-        public void updateCamera(Vector3 newPosition)
-        {
-            cameraOrigin += newPosition;
         }
 
         void SetupBuffers(int width, int height)
@@ -48,7 +43,7 @@ namespace P
 
                 GL.BindBuffer(BufferTarget.ShaderStorageBuffer, raySSBOs[i]);
                 GL.BufferData(BufferTarget.ShaderStorageBuffer,
-                    (1 + width * height) * (Vector4.SizeInBytes * 20), IntPtr.Zero, BufferUsageHint.StaticDraw);
+                    (1 + width * height * samplesSqrt * samplesSqrt) * (Vector4.SizeInBytes * 14), IntPtr.Zero, BufferUsageHint.StaticDraw);
                 GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 1 + i, raySSBOs[i]);
             }
             if (shadowRaySSBO != -1) { GL.DeleteBuffer(shadowRaySSBO); }
@@ -56,7 +51,7 @@ namespace P
 
             GL.BindBuffer(BufferTarget.ShaderStorageBuffer, shadowRaySSBO);
             GL.BufferData(BufferTarget.ShaderStorageBuffer,
-               (1 + width * height) * (Vector4.SizeInBytes * 20), IntPtr.Zero, BufferUsageHint.StaticDraw);
+               (1 + width * height * samplesSqrt * samplesSqrt) * (Vector4.SizeInBytes * 14), IntPtr.Zero, BufferUsageHint.StaticDraw);
             GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 3, shadowRaySSBO);
 
             GL.UseProgram(shadingProgram);
@@ -72,7 +67,7 @@ namespace P
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-            GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba32f, width, height, 0, PixelFormat.Rgba, PixelType.Float, (IntPtr)null);
+            GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba32f, width * samplesSqrt, height * samplesSqrt, 0, PixelFormat.Rgba, PixelType.Float, (IntPtr)null);
             GL.BindImageTexture(0, textureHandle, 0, false, 0, TextureAccess.ReadWrite, SizedInternalFormat.Rgba32f);
 
             SetupAtomics();
@@ -101,37 +96,40 @@ namespace P
 
         public void GenTex(int width, int height)
         {
-            Stopwatch sw = new Stopwatch();
-            sw.Start();
             if (width != this.width || height != this.height)
             {
                 SetupBuffers(width, height);
                 this.width = width;
                 this.height = height;
             }
+
             GL.BindTexture(TextureTarget.Texture2D, textureHandle);
             GL.ClearTexImage(textureHandle, 0, PixelFormat.Rgba, PixelType.Float, IntPtr.Zero);
             GL.UseProgram(generateProgram);
-            //Console.WriteLine("Elapsed 1: " + sw.ElapsedMilliseconds);
-            GL.Uniform3(GL.GetUniformLocation(generateProgram, "cameraOrigin"), cameraOrigin);
-            //Console.WriteLine("Elapsed 2: " + sw.ElapsedMilliseconds);
+
+            GL.Uniform3(GL.GetUniformLocation(generateProgram, "cameraOrigin"), Camera.getCameraPosition());
+            Vector3 yRange = Camera.getCameraUp() * 2 * ((float)height / (float)width);
+            GL.Uniform3(GL.GetUniformLocation(generateProgram, "p1"), Camera.getCameraFront() - Camera.getCameraRight() - yRange / 2.0f);
+            GL.Uniform3(GL.GetUniformLocation(generateProgram, "xArm"), Camera.getCameraRight() * 2);
+            GL.Uniform3(GL.GetUniformLocation(generateProgram, "yArm"), yRange);
+            
+            //GL.Uniform1(GL.GetUniformLocation(generateProgram, "aa"), aa);
+
 
             GL.BindBuffer(BufferTarget.AtomicCounterBuffer, rayCounterBO);
             GL.BufferData(BufferTarget.AtomicCounterBuffer, sizeof(uint) * 4, new uint[] { 0, 0, 0, 0 }, BufferUsageHint.StaticDraw);
  
             int currentInBuffer = 0;
-            //Console.WriteLine("Elapsed 3: " + sw.ElapsedMilliseconds);
 
             GL.UseProgram(generateProgram);
             GL.BindBuffer(BufferTarget.ShaderStorageBuffer, raySSBOs[currentInBuffer]);
             GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 1, raySSBOs[currentInBuffer]);
 
-            GL.DispatchCompute(width, height, 1);
+            GL.DispatchCompute(width * samplesSqrt, height * samplesSqrt, 1);
             GL.MemoryBarrier(MemoryBarrierFlags.ShaderStorageBarrierBit);
 
-            //Console.WriteLine("Elapsed 4: " + sw.ElapsedMilliseconds);
 
-            int maximumBounces = 6;
+            int maximumBounces = 32;
             for (int i = 0; i < maximumBounces; i++)
             {
                 //Reset the shadow ray counter
@@ -168,10 +166,6 @@ namespace P
 
                 currentInBuffer = 1 - currentInBuffer;
             }
-            //Console.WriteLine("Elapsed 5: " + sw.ElapsedMilliseconds);
-
-            sw.Stop();
-            //Console.WriteLine("Elapsed final: " + sw.ElapsedMilliseconds);
         }
 
         private bool disposedValue = false;

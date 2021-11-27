@@ -12,19 +12,29 @@ namespace P
     {
         int Handle;
 
+        static string readShader(string path)
+        {
+            string prefix = "";
+            for(int i = 0; i < 20; i++)
+            {
+                try
+                {
+                    StreamReader reader = new StreamReader(prefix + path);
+                    return reader.ReadToEnd();
+                }
+                catch (Exception e)
+                {
+                    prefix = prefix + "../";
+                }
+            }
+            Console.WriteLine("Error while trying to read shader at " + path);
+            return "";
+        }
+
         public Shader(string vertexPath, string fragmentPath)
         {
-            string vsrc;
-            using (StreamReader reader = new StreamReader(vertexPath, Encoding.UTF8))
-            {
-                vsrc = reader.ReadToEnd();
-            }
-
-            string fsrc;
-            using (StreamReader reader = new StreamReader(fragmentPath, Encoding.UTF8))
-            {
-                fsrc = reader.ReadToEnd();
-            }
+            string vsrc = readShader(vertexPath);
+            string fsrc = readShader(fragmentPath);
 
             int VertexShader = GL.CreateShader(ShaderType.VertexShader);
             int FragmentShader = GL.CreateShader(ShaderType.FragmentShader);
@@ -99,10 +109,7 @@ namespace P
             string shaderSrc = versionString + "\n";
             for (int i = 0; i < paths.Length; i++)
             {
-                using (StreamReader reader = new StreamReader(paths[i], Encoding.UTF8))
-                {
-                    shaderSrc += reader.ReadToEnd();
-                }
+                shaderSrc += readShader(paths[i]);
             }
             GL.ShaderSource(shaderHandle, shaderSrc);
             GL.CompileShader(shaderHandle);

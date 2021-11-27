@@ -90,7 +90,7 @@ namespace P
                         for (int j = 0; j < 3; j++)
                         {
                             //Ambient light
-                            pixelColor[j] += Scene[ray.objectHit].color[j] * 0.05f;
+                            //pixelColor[j] += Scene[ray.objectHit].color[j] * 0.05f;
                         }
                     }
 

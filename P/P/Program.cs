@@ -13,16 +13,12 @@ namespace P
     class Game : GameWindow
     {
         double renderCheckTime = 2.0;
-        double renderCheckInterval = 15.0;
+        double renderCheckInterval = 5.0;
 
         bool useGPU = true;
         static void Main(string[] args)
         {
-
-            using (Game game = new Game(500, 500, "GPU Ray Tracer"))
-
-
-
+            using (Game game = new Game(1280, 800, "GPU Ray Tracer"))
             {
                 game.Run(0.0);
             }
@@ -57,7 +53,7 @@ namespace P
             GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 5 * sizeof(float), 0);
             GL.VertexAttribPointer(1, 2, VertexAttribPointerType.Float, false, 5 * sizeof(float), 3 * sizeof(float));
 
-            shader = new Shader("../../shader.vert", "../../shader.frag");
+            shader = new Shader("shader.vert", "shader.frag");
             shader.Use();
 
             rayTracer = new RayTracer();
@@ -173,10 +169,7 @@ namespace P
                 newYPress = true;
             }
 
-
             Camera.OnUpdateFrame(e);
-
-
 
             base.OnUpdateFrame(e);
         }

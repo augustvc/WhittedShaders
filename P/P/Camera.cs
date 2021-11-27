@@ -11,14 +11,11 @@ using OpenTK;
 
 public static class Camera
 {
-
-
     static Vector3 cameraFront = new Vector3(0.0f, 0.0f, 1.0f);
     static Vector3 up = new Vector3(0.0f, 1.0f, 0.0f);
 
     static bool Focused = true;
 
-    static Vector2 lastPos = new Vector2(0.0f, 0.0f);
     static float sensitivity = 0.1f;
     static float pitch = 0.0f;
     static float yaw = 90.0f;
@@ -50,17 +47,12 @@ public static class Camera
 
 
     static Camera()
-
     {
-
 
     }
 
-
     static public void OnUpdateFrame(FrameEventArgs e)
     {
-
-
         if (!Focused)
         {
             return;
@@ -98,18 +90,6 @@ public static class Camera
         {
             cameraPosition -= up * cameraSpeed * (float)e.Time; //Down
         }
-
-
-
-
-
-
-
-
-
-
-
-
     }
 
     static float prevX;
@@ -118,8 +98,6 @@ public static class Camera
 
     public static void OnMouseMove(MouseMoveEventArgs e, GameWindow program)
     {
-
-
         MouseState ms = Mouse.GetState();
 
         Focused = program.Focused;
@@ -127,7 +105,6 @@ public static class Camera
         {
             if (ms.IsButtonDown(MouseButton.Left))
             {
-
                 float deltaX = ms.X - prevX;
                 float deltaY = ms.Y - prevY;
 
@@ -143,8 +120,6 @@ public static class Camera
                     pitch = -89.0f;
                 }
 
-
-
                 cameraFront.X = (float)Math.Cos(MathHelper.DegreesToRadians(pitch)) * (float)Math.Cos(MathHelper.DegreesToRadians(yaw));
                 cameraFront.Y = (float)Math.Sin(MathHelper.DegreesToRadians(pitch));
                 cameraFront.Z = (float)Math.Cos(MathHelper.DegreesToRadians(pitch)) * (float)Math.Sin(MathHelper.DegreesToRadians(yaw));
@@ -159,25 +134,13 @@ public static class Camera
                 cameraUp.Y = (float)Math.Sin(MathHelper.DegreesToRadians(pitch + 90));
                 cameraUp.Z = (float)Math.Cos(MathHelper.DegreesToRadians(pitch + 90)) * (float)Math.Sin(MathHelper.DegreesToRadians(yaw));
                 cameraUp = Vector3.Normalize(cameraUp);
-                Console.WriteLine("============================");
-
-                Console.WriteLine(cameraFront);
-                Console.WriteLine(cameraRight);
-                Console.WriteLine(cameraUp);
             }
-
-
         }
         prevX = ms.X;
         prevY = ms.Y;
-
-
-
-
     }
     public static void OnMouseWheel(MouseWheelEventArgs e)
     {
-
         if (e.Value >= 45.0f)
         {
             _fov = 45.0f;
@@ -190,8 +153,5 @@ public static class Camera
         {
             _fov -= e.DeltaPrecise;
         }
-
     }
-
-
 }

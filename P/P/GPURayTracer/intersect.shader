@@ -2,10 +2,11 @@
 {
 	vec3 origin;
 	vec3 dir;
-	vec3 mul;
+	vec3 energy;
 	float t;
 	uint pixelX;
 	uint pixelY;
+	vec3 ambient;
 };
 
 layout(std430, binding = 1) buffer rayInBuffer
@@ -33,10 +34,25 @@ struct Light
 	vec3 brightness;
 };
 
+struct Triangle
+{
+	vec3 a, b, c;
+	Material mat;
+};
+
+Triangle triangles[] = Triangle[](
+	  Triangle(vec3(0.0, 4.0, -3.0),vec3(-5.0, 4.0, 3.0), vec3(10.0, 4.0, 0.0), Material(vec3(0.0, 1.0, 0.0), 1.0, 0.0))
+	, Triangle(vec3(10.0, 0.0, 5.0), vec3(10.0, 4.0, 5.0), vec3(10.0, 0.0, 10.0), Material(vec3(0.0, 1.0, 0.0), 0.01, 0.99))
+);
+
 Sphere spheres[] = Sphere[](
 	  Sphere(vec3(-3.0, -1.5, 12.0), Material(vec3(1.0, 0.0, 0.0), 1.0, 0.0), 1.5 * 1.5)
-	, Sphere(vec3(3.0, -1.5, 12.0), Material(vec3(1.0, 0.0, 0.0), 1.0, 0.0), 1.5 * 1.5)
-	, Sphere(vec3(0.0, -1.5, 16.0), Material(vec3(0.0, 0.0, 1.0), 0.3, 0.7), 2)
+	, Sphere(vec3(3.0, -1.5, 12.0), Material(vec3(1.0, 0.0, 1.0), 1.0, 0.0), 1.5 * 1.5)
+	, Sphere(vec3(0.0, -1.5, 9.0), Material(vec3(1.0, 1.0, 0.0), 1.0, 0.0), 1.5 * 1.5)
+	, Sphere(vec3(0.0, 4, 24.0), Material(vec3(0.0, 0.0, 0.0), 0.0, 1.0), 18)
+	, Sphere(vec3(0.0, 6.5, 16.0), Material(vec3(0.0, 0.0, 0.0), 0.0, 1.0), 2)
+	, Sphere(vec3(0.0, 12.5, 16.0), Material(vec3(0.0, 0.0, 0.0), 0.0, 1.0), 2)
+	, Sphere(vec3(-5000.0, 0, 0), Material(vec3(0.0, 0.0, 0.0), 0.04, 0.96), 4994 * 4994)
 );
 
 struct Plane
@@ -47,17 +63,17 @@ struct Plane
 };
 
 Plane planes[] = Plane[](
-	Plane(vec3(0.0, 1.0, 0.0), -3.0, Material(vec3(0.0, 1.0, 0.0), 1.0, 0.0))
+	Plane(vec3(0.0, 1.0, 0.0), -3.0, Material(vec3(1.0, 1.0, 1.0), 1.0, 0.0))
 );
 
-int intersect(uint rayNum) {
+int intersect(inout Ray ray) {
 	int primID = -1;
 	for (int i = 0; i < spheres.length(); i++) {
 		Sphere sphere = spheres[i];
 
-		vec3 C = sphere.position - rays[rayNum].origin;
-		float t = dot(C, rays[rayNum].dir);
-		vec3 Q = C - (t * rays[rayNum].dir);
+		vec3 C = sphere.position - ray.origin;
+		float t = dot(C, ray.dir);
+		vec3 Q = C - (t * ray.dir);
 		float dsq = dot(Q, Q);
 
 		if (dsq > sphere.r2)
@@ -65,28 +81,63 @@ int intersect(uint rayNum) {
 		t -= sqrt(sphere.r2 - dsq);
 
 		if (t < 0) continue;
-		if (t > rays[rayNum].t) continue;
-		rays[rayNum].t = t;
+		if (t > ray.t) continue;
+		ray.t = t;
 		primID = i;
 	}
 
 	for (int i = 0; i < planes.length(); i++) {
 		Plane plane = planes[i];
 
-		float denom = dot(-plane.normal, rays[rayNum].dir);
+		float denom = dot(-plane.normal, ray.dir);
 		if (denom > 0.0001) {
 			vec3 planeOrigin = plane.normal * plane.offset;
-			vec3 diff = planeOrigin - rays[rayNum].origin;
+			vec3 diff = planeOrigin - ray.origin;
 			float t = dot(diff, -plane.normal) / denom;
 			if (t < 0) {
 				continue;
 			}
-			if (t > rays[rayNum].t) {
+			if (t > ray.t) {
 				continue;
 			}
-			rays[rayNum].t = t;
+			ray.t = t;
 			primID = 10000 + i;
 		}
 	}
+
+	for (int i = 0; i < triangles.length(); i++) {
+		Triangle tri = triangles[i];
+
+		vec3 ab = tri.b - tri.a;
+		vec3 ac = tri.c - tri.a;
+		vec3 cross1 = cross(ray.dir, ac);
+		float det = dot(ab, cross1);
+		if (abs(det) < 0.0001)
+			continue;
+
+		float detInv = 1.0 / det;
+		vec3 diff = ray.origin - tri.a;
+		float u = dot(diff, cross1) * detInv;
+		if (u < 0 || u > 1) {
+			continue;
+		}
+
+		vec3 cross2 = cross(diff, ab);
+		float v = dot(ray.dir, cross2) * detInv;
+		if (v < 0 || v > 1)
+			continue;
+
+		if (u + v > 1)
+			continue;
+		float t = dot(ac, cross2) * detInv;
+		if (t <= 0)
+			continue;
+
+		if (t < ray.t) {
+			primID = 20000 + i;
+			ray.t = t;
+		}
+	}
+
 	return primID;
 }
