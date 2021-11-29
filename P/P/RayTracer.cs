@@ -16,6 +16,7 @@ namespace P
         {
             Scene = new List<Primitive>();
             Scene.Add(new Sphere(0, -1, 8, 2, new Vector3(1, 0, 0)));
+            Scene.Add(new Sphere(1, -5, 7, 2, new Vector3(1, 0, 0)));
             LightSources = new List<Light>();
             LightSources.Add(new Light(new Vector3(0.0f, 8.0f, 0.0f), new Vector3(20f, 20f, 20f)));
         }

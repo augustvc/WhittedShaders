@@ -26,7 +26,7 @@ public static class Camera
     private static float _fov;
     static Vector3 cameraPosition = new Vector3(0.0f, 0.0f, -1.0f);
 
-    static float cameraSpeed = 1.0f;
+    static float cameraSpeed = 4.0f;
     static Vector3 cameraRight = new Vector3(1.0f, 0.0f, 0.0f);
     static Vector3 cameraUp = new Vector3(0.0f, 1.0f, 0.0f);
 
@@ -70,33 +70,33 @@ public static class Camera
         if (input.IsKeyDown(Key.D))
         {
 
-            cameraPosition += cameraRight * cameraSpeed; //Forward 
+            cameraPosition += cameraRight * cameraSpeed * (float)e.Time; //Forward 
         }
 
         if (input.IsKeyDown(Key.A))
         {
 
-            cameraPosition -= cameraRight * cameraSpeed; //Backwards
+            cameraPosition -= cameraRight * cameraSpeed * (float)e.Time; //Backwards
         }
 
         if (input.IsKeyDown(Key.S))
         {
-            cameraPosition -= cameraFront * cameraSpeed; //Left
+            cameraPosition -= cameraFront * cameraSpeed * (float)e.Time; //Left
         }
 
         if (input.IsKeyDown(Key.W))
         {
-            cameraPosition += cameraFront * cameraSpeed; //Right
+            cameraPosition += cameraFront * cameraSpeed * (float)e.Time; //Right
         }
 
         if (input.IsKeyDown(Key.Space))
         {
-            cameraPosition += up * cameraSpeed; //Up 
+            cameraPosition += up * cameraSpeed * (float)e.Time; //Up 
         }
 
         if (input.IsKeyDown(Key.LShift))
         {
-            cameraPosition -= up * cameraSpeed; //Down
+            cameraPosition -= up * cameraSpeed * (float)e.Time; //Down
         }
 
 
