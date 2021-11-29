@@ -57,6 +57,7 @@
     <Compile Include="GPURayTracer\GPURayTracer.cs" />
     <Compile Include="Light.cs" />
     <Compile Include="MeshLoader.cs" />
+    <Compile Include="Plane.cs" />
     <Compile Include="Primitive.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
