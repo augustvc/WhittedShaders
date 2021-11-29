@@ -151,7 +151,7 @@ public static class Camera
                 cameraFront = Vector3.Normalize(cameraFront);
 
                 cameraRight.X = (float)Math.Cos(MathHelper.DegreesToRadians(pitch)) * (float)Math.Cos(MathHelper.DegreesToRadians(yaw - 90));
-                cameraRight.Y = (float)Math.Sin(MathHelper.DegreesToRadians(pitch));
+                cameraRight.Y = 0;
                 cameraRight.Z = (float)Math.Cos(MathHelper.DegreesToRadians(pitch)) * (float)Math.Sin(MathHelper.DegreesToRadians(yaw - 90));
                 cameraRight = Vector3.Normalize(cameraRight);
 
