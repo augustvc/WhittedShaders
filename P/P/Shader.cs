@@ -22,7 +22,7 @@ namespace P
                     StreamReader reader = new StreamReader(prefix + path);
                     return reader.ReadToEnd();
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     prefix = prefix + "../";
                 }

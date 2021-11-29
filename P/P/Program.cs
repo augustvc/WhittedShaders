@@ -40,6 +40,7 @@ namespace P
 
         protected override void OnLoad(EventArgs e)
         {
+            MeshLoader.Init();
             GL.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
             VAO = GL.GenVertexArray();
             GL.BindVertexArray(VAO);
