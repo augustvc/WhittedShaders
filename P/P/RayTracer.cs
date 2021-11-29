@@ -16,9 +16,10 @@ namespace P
         {
             Scene = new List<Primitive>();
             Scene.Add(new Sphere(0, -1, 8, 2, new Vector3(1, 0, 0)));
-            Scene.Add(new Sphere(1, -5, 7, 2, new Vector3(1, 0, 0)));
+            //Scene.Add(new Sphere(1, -5, 7, 2, new Vector3(1, 0, 0)));
+            Scene.Add(new Plane(0, 1, 0, -5, new Vector3(0, 1, 0)));
             LightSources = new List<Light>();
-            LightSources.Add(new Light(new Vector3(0.0f, 8.0f, 0.0f), new Vector3(20f, 20f, 20f)));
+            LightSources.Add(new Light(new Vector3(0.0f, 8.0f, 0.0f), new Vector3(50f, 50f, 50f)));
         }
 
         public float[] GenTexture(int width, int height)
@@ -69,9 +70,10 @@ namespace P
                         Vector3 collisionPosition = ray.Origin + ray.t * ray.Direction;
                         Vector3 shadowRayOrigin = collisionPosition + 0.0001f * normal;
 
-                        for (int li = 0; li < LightSources.Count; li++) {
+                        for (int li = 0; li < LightSources.Count; li++)
+                        {
                             float inverseDistSq = 1.0f / (LightSources[li].position - shadowRayOrigin).LengthSquared;
-                            
+
                             Ray shadowRay = new Ray(shadowRayOrigin, (LightSources[li].position - shadowRayOrigin).Normalized());
                             for (int i = 0; i < Scene.Count; i++)
                             {
@@ -79,7 +81,7 @@ namespace P
                             }
                             if (shadowRay.objectHit == -1)
                             {
-                                for(int j = 0; j < 3; j++)
+                                for (int j = 0; j < 3; j++)
                                 {
                                     float ndotl = Vector3.Dot(shadowRay.Direction, normal);
                                     if (ndotl > 0.0f)
