@@ -25,12 +25,6 @@ void main() {
 			pixel = vec4(ray.ambient, 1.0);
 		}
 
-		for (int i = 0; i < 10000; i++) {
-			if (i % 1000 == 384) {
-				//pixel += vec4(0.0, 0.0, 0.0, 0.0001);
-			}
-		}
-
 		ivec2 pixel_coords = ivec2(ray.pixelX, ray.pixelY);
 		vec4 clr = imageLoad(img_output, pixel_coords);
 		imageStore(img_output, pixel_coords, clr + pixel);

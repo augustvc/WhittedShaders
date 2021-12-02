@@ -38,7 +38,20 @@ void main() {
 		
 		vec3 normal = vec3(0.0);
 		Material mat = Material(vec3(0.0), 1.0, 0.0);
-		if (primID >= 20000) {
+		if (primID >= 30000) {
+			//Triangle from a mesh
+			primID -= 30000;
+			mat = Material(vec3(1.0), 1.0, 0.0);
+			uint triAI = indexBuffer[primID++];
+			uint triBI = indexBuffer[primID++];
+			uint triCI = indexBuffer[primID++];
+			vec3 triA = vec3(vertexBuffer[triAI * 8], vertexBuffer[triAI * 8 + 1], vertexBuffer[triAI * 8 + 2]);
+			vec3 triB = vec3(vertexBuffer[triBI * 8], vertexBuffer[triBI * 8 + 1], vertexBuffer[triBI * 8 + 2]);
+			vec3 triC = vec3(vertexBuffer[triCI * 8], vertexBuffer[triCI * 8 + 1], vertexBuffer[triCI * 8 + 2]);
+			normal = normalize(cross(triC - triA, triB - triA));
+			if (dot(rays[rayNum].dir, normal) > 0)
+				normal = -normal;
+		} else if (primID >= 20000) {
 			mat = triangles[primID - 20000].mat;
 			Triangle tri = triangles[primID - 20000];
 			normal = normalize(cross(tri.b - tri.a, tri.c - tri.a));
