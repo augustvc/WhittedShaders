@@ -34,13 +34,13 @@ namespace P
             return (collisionPoint - Location).Normalized();
         }
 
-        public Sphere(Vector3 Origin, float radius, Vector3 color) : base(color)
+        public Sphere(Vector3 Origin, float radius, Material mat) : base()
         {
             this.Location = Origin;
             this.radius = radius;
             radiusSq = radius * radius;
+            this.material = mat;
         }
 
-        public Sphere(float x, float y, float z, float radius, Vector3 color) : this(new Vector3(x, y, z), radius, color) { }
     }
 }

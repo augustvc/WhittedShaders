@@ -9,7 +9,7 @@ namespace P
 {
     abstract class Primitive
     {
-        public Vector3 color = new Vector3(0f, 0.5f, 0f);
+        public Material material = new Material(new Vector3(1.0f), 1.0f, 0.0f, false);
         static int primitiveCount;
         int primitiveID;
         public abstract void Intersect(Ray ray);
@@ -17,9 +17,8 @@ namespace P
         public abstract Vector3 GetNormal(Ray ray);
 
 
-        public Primitive(Vector3 color)
+        public Primitive()
         {
-            this.color = color;
             primitiveID = primitiveCount;
             primitiveCount++;
         }

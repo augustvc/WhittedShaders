@@ -53,16 +53,13 @@ namespace P
         }
 
 
-        public Plane(Vector3 normal, float offset, Vector3 color) : base(color)
+        public Plane(Vector3 normal, float offset, Material mat) : base()
         {
             this.normal = normal.Normalized();
             this.offset = offset;
 
 
         }
-
-        public Plane(float x, float y, float z, float offset, Vector3 color) : this(new Vector3(x, y, z), offset, color) { }
-
 
     }
 }
