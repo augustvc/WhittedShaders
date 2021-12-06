@@ -14,6 +14,17 @@ layout(std430, binding = 1) buffer rayInBuffer
 	Ray rays[];
 };
 
+layout(std430, binding = 5) buffer vertexBufferObj
+{
+	float vertexBuffer[];
+};
+
+layout(std430, binding = 6) buffer indexBufferObj
+{
+	uint indexBuffer[];
+};
+
+
 struct Material
 {
 	vec3 color;
@@ -41,8 +52,8 @@ struct Triangle
 };
 
 Triangle triangles[] = Triangle[](
-	  Triangle(vec3(0.0, 4.0, -3.0),vec3(-5.0, 4.0, 3.0), vec3(10.0, 4.0, 0.0), Material(vec3(0.0, 1.0, 0.0), 1.0, 0.0))
-	, Triangle(vec3(10.0, 0.0, 5.0), vec3(10.0, 4.0, 5.0), vec3(10.0, 0.0, 10.0), Material(vec3(0.0, 1.0, 0.0), 0.01, 0.99))
+	//  Triangle(vec3(0.0, 4.0, -3.0),vec3(-5.0, 4.0, 3.0), vec3(10.0, 4.0, 0.0), Material(vec3(0.0, 1.0, 0.0), 1.0, 0.0))
+	 Triangle(vec3(10.0, 0.0, 5.0), vec3(10.0, 4.0, 5.0), vec3(10.0, 0.0, 10.0), Material(vec3(0.0, 1.0, 0.0), 0.01, 0.99))
 );
 
 Sphere spheres[] = Sphere[](
@@ -102,6 +113,47 @@ int intersect(inout Ray ray) {
 			}
 			ray.t = t;
 			primID = 10000 + i;
+		}
+	}
+
+	int i = 1;
+	while(i <= indexBuffer[0]) {
+		uint triAI = indexBuffer[i++];
+		uint triBI = indexBuffer[i++];
+		uint triCI = indexBuffer[i++];
+
+		vec3 triA = vec3(vertexBuffer[triAI * 8], vertexBuffer[triAI * 8 + 1], vertexBuffer[triAI * 8 + 2]);
+		vec3 triB = vec3(vertexBuffer[triBI * 8], vertexBuffer[triBI * 8 + 1], vertexBuffer[triBI * 8 + 2]);
+		vec3 triC = vec3(vertexBuffer[triCI * 8], vertexBuffer[triCI * 8 + 1], vertexBuffer[triCI * 8 + 2]);
+		vec3 ab = triB - triA;
+		vec3 ac = triC - triA;
+
+		vec3 cross1 = cross(ray.dir, ac);
+		float det = dot(ab, cross1);
+		if (abs(det) < 0.0001)
+			continue;
+
+		float detInv = 1.0 / det;
+		vec3 diff = ray.origin - triA;
+		float u = dot(diff, cross1) * detInv;
+		if (u < 0 || u > 1) {
+			continue;
+		}
+
+		vec3 cross2 = cross(diff, ab);
+		float v = dot(ray.dir, cross2) * detInv;
+		if (v < 0 || v > 1)
+			continue;
+
+		if (u + v > 1)
+			continue;
+		float t = dot(ac, cross2) * detInv;
+		if (t <= 0)
+			continue;
+
+		if (t < ray.t) {
+			ray.t = t;
+			primID = 30000 + i - 3;
 		}
 	}
 

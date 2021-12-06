@@ -18,12 +18,14 @@ namespace P
         int[] raySSBOs = { -1, -1 };
         int shadowRaySSBO = -1;
         int rayCounterBO = -1;
+        int vertexBO = -1;
+        int faceBO = -1;
         int width = 1;
         int height = 1;
         int textureHandle = -1;
         int samplesSqrt = 1;
 
-        public GPURayTracer()
+        public GPURayTracer ()
         {
             generateProgram = Shader.CreateComputeShaderProgram("#version 460", new string[] { "GPURayTracer/generate.shader" });
             bruteFirstHitProgram = Shader.CreateComputeShaderProgram("#version 430", new string[] { "GPURayTracer/intersect.shader", "GPURayTracer/bruteFirstHit.shader" });
@@ -46,6 +48,23 @@ namespace P
                     (1 + width * height * samplesSqrt * samplesSqrt) * (Vector4.SizeInBytes * 14), IntPtr.Zero, BufferUsageHint.StaticDraw);
                 GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 1 + i, raySSBOs[i]);
             }
+            if (vertexBO == -1) vertexBO = GL.GenBuffer();
+
+            GL.BindBuffer(BufferTarget.ShaderStorageBuffer, vertexBO);
+            GL.BufferData(BufferTarget.ShaderStorageBuffer, MeshLoader.vertices.Length * sizeof(float), MeshLoader.vertices, BufferUsageHint.StaticDraw);
+            GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 5, vertexBO);
+
+            GL.BindBuffer(BufferTarget.ShaderStorageBuffer, faceBO);
+            GL.BufferData(BufferTarget.ShaderStorageBuffer, MeshLoader.indices.Count * sizeof(uint), MeshLoader.indices.ToArray(), BufferUsageHint.StaticDraw);
+            GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 6, faceBO);
+
+            GL.UseProgram(bruteFirstHitProgram);
+            GL.Uniform1(GL.GetUniformLocation(bruteFirstHitProgram, "trianglesInBuffer"), 100000);
+            GL.UseProgram(shadingProgram);
+            GL.Uniform1(GL.GetUniformLocation(shadingProgram, "trianglesInBuffer"), 100000);
+
+            GL.UseProgram(shadingProgram);
+
             if (shadowRaySSBO != -1) { GL.DeleteBuffer(shadowRaySSBO); }
             shadowRaySSBO = GL.GenBuffer();
 
@@ -55,9 +74,6 @@ namespace P
             GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 3, shadowRaySSBO);
 
             GL.UseProgram(shadingProgram);
-
-            GL.BindBuffer(BufferTarget.ShaderStorageBuffer, shadowRaySSBO);
-            GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 3, shadowRaySSBO);
 
             if (textureHandle != -1) { GL.DeleteTexture(textureHandle); } //We already had a texture, so delete it.
             textureHandle = GL.GenTexture();
@@ -83,12 +99,8 @@ namespace P
                 GL.BindBuffer(BufferTarget.AtomicCounterBuffer, rayCounterBO);
                 GL.BufferData(BufferTarget.AtomicCounterBuffer, sizeof(uint) * 4, test, BufferUsageHint.StaticDraw);
                 GL.BindBufferBase(BufferRangeTarget.AtomicCounterBuffer, 4, rayCounterBO);
-
+                
                 GL.UseProgram(bruteFirstHitProgram);
-                GL.BindBuffer(BufferTarget.AtomicCounterBuffer, rayCounterBO);
-                GL.BindBufferBase(BufferRangeTarget.AtomicCounterBuffer, 4, rayCounterBO);
-
-                GL.UseProgram(shadingProgram);
                 GL.BindBuffer(BufferTarget.AtomicCounterBuffer, rayCounterBO);
                 GL.BindBufferBase(BufferRangeTarget.AtomicCounterBuffer, 4, rayCounterBO);
             }
@@ -113,12 +125,9 @@ namespace P
             GL.Uniform3(GL.GetUniformLocation(generateProgram, "xArm"), Camera.getCameraRight() * 2);
             GL.Uniform3(GL.GetUniformLocation(generateProgram, "yArm"), yRange);
 
-            //GL.Uniform1(GL.GetUniformLocation(generateProgram, "aa"), aa);
-
-
             GL.BindBuffer(BufferTarget.AtomicCounterBuffer, rayCounterBO);
             GL.BufferData(BufferTarget.AtomicCounterBuffer, sizeof(uint) * 4, new uint[] { 0, 0, 0, 0 }, BufferUsageHint.StaticDraw);
-
+ 
             int currentInBuffer = 0;
 
             GL.UseProgram(generateProgram);
@@ -126,7 +135,9 @@ namespace P
             GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 1, raySSBOs[currentInBuffer]);
 
             GL.DispatchCompute(width * samplesSqrt, height * samplesSqrt, 1);
-            GL.MemoryBarrier(MemoryBarrierFlags.ShaderStorageBarrierBit);
+            //GL.MemoryBarrier(MemoryBarrierFlags.ShaderStorageBarrierBit);
+            //GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
+            GL.Finish();
 
 
             int maximumBounces = 32;
@@ -150,11 +161,15 @@ namespace P
 
                 //Run the programs
                 GL.DispatchCompute(262144 / 64, 1, 1);
-                GL.MemoryBarrier(MemoryBarrierFlags.ShaderStorageBarrierBit);
+                //GL.MemoryBarrier(MemoryBarrierFlags.ShaderStorageBarrierBit);
+                //GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
+                GL.Finish();
 
                 GL.UseProgram(shadingProgram);
                 GL.DispatchCompute(262144 / 64, 1, 1);
-                GL.MemoryBarrier(MemoryBarrierFlags.ShaderStorageBarrierBit);
+                //GL.MemoryBarrier(MemoryBarrierFlags.ShaderStorageBarrierBit);
+                //GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
+                GL.Finish();
 
                 //Swap counters
                 GL.CopyBufferSubData(BufferTarget.AtomicCounterBuffer, BufferTarget.AtomicCounterBuffer,
@@ -197,6 +212,8 @@ namespace P
             }
             GL.DeleteBuffer(shadowRaySSBO);
             GL.DeleteBuffer(rayCounterBO);
+            GL.DeleteBuffer(vertexBO);
+            GL.DeleteBuffer(faceBO);
             GL.DeleteTexture(textureHandle);
             Dispose(true);
             GC.SuppressFinalize(this);
