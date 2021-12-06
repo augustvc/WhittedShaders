@@ -12,7 +12,7 @@ using OpenTK;
 public static class Camera
 {
     static Vector3 cameraFront = new Vector3(0.0f, 0.0f, 1.0f);
-    static Vector3 up = new Vector3(0.0f, 1.0f, 0.0f);
+
 
     static bool Focused = true;
 
@@ -20,7 +20,7 @@ public static class Camera
     static float pitch = 0.0f;
     static float yaw = 90.0f;
 
-    private static float _fov;
+    public static float _screenDist = 2f;
     static Vector3 cameraPosition = new Vector3(0.0f, 0.0f, -1.0f);
 
     static float cameraSpeed = 4.0f;
@@ -43,6 +43,11 @@ public static class Camera
     static public Vector3 getCameraRight()
     {
         return cameraRight;
+    }
+
+    static public float getCameraFOV()
+    {
+        return Camera._screenDist;
     }
 
 
@@ -83,12 +88,12 @@ public static class Camera
 
         if (input.IsKeyDown(Key.Space))
         {
-            cameraPosition += up * cameraSpeed * (float)e.Time; //Up 
+            cameraPosition += cameraUp * cameraSpeed * (float)e.Time; //Up 
         }
 
         if (input.IsKeyDown(Key.LShift))
         {
-            cameraPosition -= up * cameraSpeed * (float)e.Time; //Down
+            cameraPosition -= cameraUp * cameraSpeed * (float)e.Time; //Down
         }
     }
 
@@ -141,17 +146,24 @@ public static class Camera
     }
     public static void OnMouseWheel(MouseWheelEventArgs e)
     {
-        if (e.Value >= 45.0f)
+        if (e.DeltaPrecise >= 0)
         {
-            _fov = 45.0f;
-        }
-        else if (e.Value <= 1.0f)
-        {
-            _fov = 1.0f;
+            _screenDist *= 1.1f;
+
         }
         else
         {
-            _fov -= e.DeltaPrecise;
+            _screenDist /= 1.1f;
         }
+        if (_screenDist >= 10.0f)
+        {
+
+            _screenDist = 10.0f;
+        }
+        else if (_screenDist <= 0.01f)
+        {
+            _screenDist = 0.01f;
+        }
+
     }
 }

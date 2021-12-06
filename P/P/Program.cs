@@ -18,7 +18,7 @@ namespace P
         bool useGPU = true;
         static void Main(string[] args)
         {
-            using (Game game = new Game(1280, 800, "GPU Ray Tracer"))
+            using (Game game = new Game(1080, 940, "GPU Ray Tracer"))
             {
                 game.Run(0.0);
             }
@@ -181,6 +181,14 @@ namespace P
             Camera.OnMouseMove(e, this);
 
             base.OnMouseMove(e);
+        }
+
+        protected override void OnMouseWheel(MouseWheelEventArgs e)
+        {
+
+            Camera.OnMouseWheel(e);
+            base.OnMouseWheel(e);
+
         }
 
         public Game(int width, int height, string title) : base(width, height, GraphicsMode.Default, title) { }

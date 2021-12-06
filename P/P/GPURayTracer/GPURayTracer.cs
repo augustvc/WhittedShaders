@@ -21,9 +21,9 @@ namespace P
         int width = 1;
         int height = 1;
         int textureHandle = -1;
-        int samplesSqrt = 2;
+        int samplesSqrt = 1;
 
-        public GPURayTracer ()
+        public GPURayTracer()
         {
             generateProgram = Shader.CreateComputeShaderProgram("#version 460", new string[] { "GPURayTracer/generate.shader" });
             bruteFirstHitProgram = Shader.CreateComputeShaderProgram("#version 430", new string[] { "GPURayTracer/intersect.shader", "GPURayTracer/bruteFirstHit.shader" });
@@ -83,7 +83,7 @@ namespace P
                 GL.BindBuffer(BufferTarget.AtomicCounterBuffer, rayCounterBO);
                 GL.BufferData(BufferTarget.AtomicCounterBuffer, sizeof(uint) * 4, test, BufferUsageHint.StaticDraw);
                 GL.BindBufferBase(BufferRangeTarget.AtomicCounterBuffer, 4, rayCounterBO);
-                
+
                 GL.UseProgram(bruteFirstHitProgram);
                 GL.BindBuffer(BufferTarget.AtomicCounterBuffer, rayCounterBO);
                 GL.BindBufferBase(BufferRangeTarget.AtomicCounterBuffer, 4, rayCounterBO);
@@ -112,13 +112,13 @@ namespace P
             GL.Uniform3(GL.GetUniformLocation(generateProgram, "p1"), Camera.getCameraFront() - Camera.getCameraRight() - yRange / 2.0f);
             GL.Uniform3(GL.GetUniformLocation(generateProgram, "xArm"), Camera.getCameraRight() * 2);
             GL.Uniform3(GL.GetUniformLocation(generateProgram, "yArm"), yRange);
-            
+
             //GL.Uniform1(GL.GetUniformLocation(generateProgram, "aa"), aa);
 
 
             GL.BindBuffer(BufferTarget.AtomicCounterBuffer, rayCounterBO);
             GL.BufferData(BufferTarget.AtomicCounterBuffer, sizeof(uint) * 4, new uint[] { 0, 0, 0, 0 }, BufferUsageHint.StaticDraw);
- 
+
             int currentInBuffer = 0;
 
             GL.UseProgram(generateProgram);

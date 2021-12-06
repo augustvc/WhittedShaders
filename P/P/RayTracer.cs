@@ -15,11 +15,17 @@ namespace P
         public RayTracer()
         {
             Scene = new List<Primitive>();
-            Scene.Add(new Sphere(0, -1, 8, 2, new Vector3(1, 0, 0)));
-            //Scene.Add(new Sphere(1, -5, 7, 2, new Vector3(1, 0, 0)));
+            Scene.Add(new Sphere(0, -3, 8, 2, new Vector3(1, 0, 0)));
+            //Scene.Add(new Sphere(0, 3, 7, 2, new Vector3(1, 0, 0)));
+            //Scene.Add(new Sphere(10, -1, 7, 2, new Vector3(1, 0, 0)));
+            //Scene.Add(new Sphere(15, -1, 7, 2, new Vector3(1, 0, 0)));
+            //Scene.Add(new Sphere(20, -1, 7, 2, new Vector3(1, 0, 0)));
+            //Scene.Add(new Sphere(-5, -1, 7, 2, new Vector3(1, 0, 0)));
+            //Scene.Add(new Sphere(-10, -1, 7, 2, new Vector3(1, 0, 0)));
             Scene.Add(new Plane(0, 1, 0, -5, new Vector3(0, 1, 0)));
             LightSources = new List<Light>();
             LightSources.Add(new Light(new Vector3(0.0f, 8.0f, 0.0f), new Vector3(50f, 50f, 50f)));
+            LightSources.Add(new Light(new Vector3(5.0f, 8.0f, 0.0f), new Vector3(50f, 50f, 50f)));
         }
 
         public float[] GenTexture(int width, int height)
@@ -32,7 +38,7 @@ namespace P
             Vector3 cameraRight = Camera.getCameraRight();
             Vector3 cameraUp = Camera.getCameraUp();
 
-            float screenDistance = 2f;
+            float screenDistance = Camera._screenDist;
             Vector3 ScreenCenter = cameraPosition + ViewDirection * screenDistance;
             Vector3 BottomLeft = ScreenCenter - cameraUp - cameraRight;
             Vector3 BottomRight = ScreenCenter - cameraUp + cameraRight;
@@ -41,6 +47,40 @@ namespace P
             Vector3 xArm = BottomRight - BottomLeft;
             Vector3 yArm = TopLeft - BottomLeft;
             yArm *= (float)height / (float)width;
+
+            //fish eye implementation
+            Vector3 Norm = Vector3.Normalize(xArm) + Vector3.Normalize(yArm);
+
+            float pi = 3.148f;
+            float aperture = 1.0f;
+
+
+
+            double radius = Math.Atan2(Math.Sqrt(Norm.X * Norm.X + Norm.Y * Norm.Y), (double)screenDistance) / pi;
+            double phi = Math.Atan2(Norm.Y, Norm.X);
+
+            double u = radius * Math.Cos(phi) + 0.5;
+            double v = radius * Math.Sin(phi) + 0.5;
+
+            double theta = radius * aperture / 2;
+
+            if (radius == 0)
+            {
+                phi = 0;
+            }
+            else if (Norm.X < 0)
+            {
+                phi = pi - Math.Asin(Norm.Y / radius);
+            }
+            else if (Norm.X >= 0)
+            {
+                phi = Math.Asin(Norm.Y / radius);
+            }
+
+            ViewDirection.X = (float)(Math.Sin(theta) * Math.Cos(phi));
+            ViewDirection.Y = (float)(Math.Sin(theta) * Math.Sin(phi));
+            ViewDirection.Z = (float)(Math.Cos(theta));
+
 
             int index = 0;
 
