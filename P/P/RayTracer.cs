@@ -1,9 +1,11 @@
 ﻿using System;
+using OpenTK.Input;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using OpenTK;
+
 
 namespace P
 {
@@ -105,39 +107,52 @@ namespace P
             yArm *= (float)height / (float)width;
 
             //fish eye implementation
-            Vector3 Norm = Vector3.Normalize(xArm) + Vector3.Normalize(yArm);
+            bool isFish = false;
+            KeyboardState input = Keyboard.GetState();
 
-            float pi = 3.148f;
-            float aperture = 1.0f;
-            Vector2 center = new Vector2(ScreenCenter.X / 2, ScreenCenter.Y / 2);
-            Vector2 rel = new Vector2(ScreenCenter.X - center.X, ScreenCenter.Y - center.Y);
-
-
-            float radius = (float)Math.Atan2(Math.Sqrt(rel.X * rel.X + rel.Y * rel.Y), (float)screenDistance) / pi;
-            float phi = (float)Math.Atan2(Norm.Y, Norm.X);
-
-            //double u = radius * Math.Cos(phi) + 0.5;
-            //double v = radius * Math.Sin(phi) + 0.5;
-
-            float theta = (float)Math.Atan2(rel.X, rel.Y);
-            theta += radius * aperture;
-
-            if (radius == 0)
+            while (isFish)
             {
-                phi = 0;
-            }
-            else if (rel.X < 0)
-            {
-                phi = pi - (float)Math.Asin(Norm.Y / radius);
-            }
-            else if (rel.X >= 0)
-            {
-                phi = (float)Math.Asin(Norm.Y / radius);
-            }
+                if (input.IsKeyDown(Key.F))
+                {
+                    Vector3 Norm = Vector3.Normalize(xArm) + Vector3.Normalize(yArm);
 
-            ViewDirection.X = (float)(Math.Sin(theta) * Math.Cos(phi));
-            ViewDirection.Y = (float)(Math.Sin(theta) * Math.Sin(phi));
-            ViewDirection.Z = (float)(Math.Cos(theta));
+                    float pi = 3.148f;
+                    float aperture = 5.0f;
+                    Vector2 center = new Vector2(ScreenCenter.X / 2, ScreenCenter.Y / 2);
+                    Vector2 rel = new Vector2(ScreenCenter.X - center.X, ScreenCenter.Y - center.Y);
+
+
+                    float radius = (float)Math.Atan2(Math.Sqrt(rel.X * rel.X + rel.Y * rel.Y), (float)screenDistance) / pi;
+                    float phi = (float)Math.Atan2(Norm.Y, Norm.X);
+
+                    //double u = radius * Math.Cos(phi) + 0.5;
+                    //double v = radius * Math.Sin(phi) + 0.5;
+
+                    float theta = (float)Math.Atan2(rel.X, rel.Y);
+                    theta += radius * aperture;
+
+                    if (radius == 0)
+                    {
+                        phi = 0;
+                    }
+                    else if (rel.X < 0)
+                    {
+                        phi = pi - (float)Math.Asin(Norm.Y / radius);
+                    }
+                    else if (rel.X >= 0)
+                    {
+                        phi = (float)Math.Asin(Norm.Y / radius);
+                    }
+
+                    ScreenCenter.X = (float)(Math.Sin(theta) * Math.Cos(phi));
+                    ScreenCenter.Y = (float)(Math.Sin(theta) * Math.Sin(phi));
+                    ScreenCenter.Z = (float)(Math.Cos(theta));
+                    isFish = true;
+                }
+                else
+                    isFish = false;
+
+            }
 
 
 
