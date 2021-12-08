@@ -17,14 +17,17 @@ namespace P
         public RayTracer()
         {
             Scene = new List<Primitive>();
-            Scene.Add(new Sphere(new Vector3(0, -3, 8), 2, new Material(new Vector3(1, 0, 0), 0.0f, 1.0f, false)));
-            Scene.Add(new Sphere(new Vector3(0, 3, 7), 2, new Material(new Vector3(1, 0, 0), 1.0f, 0.0f, false)));
-            Scene.Add(new Sphere(new Vector3(10, -1, 7), 2, new Material(new Vector3(1, 0, 0), 1.0f, 0.0f, false)));
-            Scene.Add(new Sphere(new Vector3(15, -1, 7), 2, new Material(new Vector3(1, 0, 0), 1.0f, 0.0f, false)));
-            Scene.Add(new Sphere(new Vector3(-5, -1, 7), 2, new Material(new Vector3(1, 0, 0), 1.0f, 0.0f, false)));
-            Scene.Add(new Sphere(new Vector3(-10, -1, 7), 2, new Material(new Vector3(1, 0, 0), 1.0f, 0.0f, false)));
+            //Scene.Add(new Sphere(new Vector3(0, -3, 8), 2, new Material(new Vector3(1, 0, 1), 0.0f, 1.0f, false)));
+            Scene.Add(new Sphere(new Vector3(0, 3, 7), 2, new Material(new Vector3(1, 1, 0), 1.0f, 0.0f, false)));
+            //Scene.Add(new Sphere(new Vector3(10, -1, 7), 2, new Material(new Vector3(1, 1, 1), 1.0f, 0.0f, false)));
+
+            //For glass, instead of color, the material contains extinction rate
+            Scene.Add(new Sphere(new Vector3(15, -1, 7), 2, new Material(new Vector3(0, 0, 0), 0.0f, 0.0f, true)));
+            
+            //Scene.Add(new Sphere(new Vector3(-5, -1, 7), 2, new Material(new Vector3(0, 1, 0), 1.0f, 0.0f, false)));
+            //Scene.Add(new Sphere(new Vector3(-10, -1, 7), 2, new Material(new Vector3(0, 0, 0), 1.0f, 0.0f, false)));
             Scene.Add(new Plane(new Vector3(0, 1, 0), -5, new Material(new Vector3(0, 1, 0), 1.0f, 0.0f, false)));
-            Scene.Add(new Plane(new Vector3(0, 0, -1), -16, new Material(new Vector3(1, 1, 1), 0.0f, 1.0f, false)));
+            //Scene.Add(new Plane(new Vector3(0, 0, -1), -16, new Material(new Vector3(1, 1, 1), 0.0f, 1.0f, false)));
             LightSources = new List<Light>();
             LightSources.Add(new Light(new Vector3(0.0f, 8.0f, 0.0f), new Vector3(50f, 50f, 50f)));
             LightSources.Add(new Light(new Vector3(5.0f, 8.0f, 0.0f), new Vector3(50f, 50f, 50f)));
@@ -32,6 +35,10 @@ namespace P
 
         Vector3 Sample(Ray ray, int maxDepth)
         {//Intersect our ray with every primitive in the scene.
+            if(maxDepth < 0)
+            {
+                return new Vector3(0f);
+            }
             for (int i = 0; i < Scene.Count; i++)
             {
                 Scene[i].Intersect(ray);
@@ -46,6 +53,7 @@ namespace P
                 Vector3 shadowRayOrigin = collisionPosition + 0.0001f * normal;
 
                 Material materialHit = Scene[ray.objectHit].material;
+
                 if (materialHit.diffuse > 0.0f) {
                     for (int li = 0; li < LightSources.Count; li++)
                     {
@@ -71,11 +79,48 @@ namespace P
                     }
                 }
 
-                if(materialHit.specular > 0.0f)
+                float specular = materialHit.specular;
+
+                if(materialHit.dielectric)
+                {
+                    float n1 = ray.refractionIndex;
+                    float n2 = materialHit.refractionIndex;
+                    float n1Overn2 = n1 / n2;
+
+                    if(Vector3.Dot(ray.Direction, normal) > 0)
+                    {
+                        normal = -normal;
+                    }
+
+                    float dot = Vector3.Dot(-ray.Direction, normal);
+                    float k = 1f - (n1Overn2 * n1Overn2) * (1f - dot * dot);
+                    if (k >= 0)
+                    {
+                        Vector3 tdir = (n1Overn2 * ray.Direction + normal * (n1Overn2 * dot - (float)Math.Sqrt(k))).Normalized();
+                        Ray transmission = new Ray(ray.Origin + tdir * 0.001f, tdir, float.MaxValue, n2);
+
+                        float cosThetaT = Vector3.Dot(-normal, tdir);
+
+                        float sPolarizedSqrt = (n1 * dot - n2 * cosThetaT) /
+                                    (n1 * dot + n2 * cosThetaT);
+
+                        float pPolarizedSqrt = (n1 * cosThetaT - n2 * dot) /
+                                                (n1 * cosThetaT + n2 * dot);
+
+                        specular = 0.5f * (sPolarizedSqrt * sPolarizedSqrt + pPolarizedSqrt * pPolarizedSqrt);
+                        color += (1f - specular) * Sample(transmission, maxDepth - 1);
+                    } else
+                    {
+                        specular = 1.0f;
+                    }                 
+                }
+
+                if (specular > 0.0f)
                 {
                     Ray reflection = new Ray(shadowRayOrigin, ray.Direction + (Vector3.Dot(-ray.Direction, normal) * normal * 2));
                     color += Sample(reflection, maxDepth - 1);
                 }
+
                 for (int j = 0; j < 3; j++)
                 {
                     //Ambient light
