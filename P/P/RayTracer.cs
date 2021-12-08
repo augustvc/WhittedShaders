@@ -15,7 +15,7 @@ namespace P
         public RayTracer()
         {
             Scene = new List<Primitive>();
-            Scene.Add(new Sphere(new Vector3(0, -3, 8), 2, new Material(new Vector3(1, 0, 0), 1.0f, 0.0f, false)));
+            Scene.Add(new Sphere(new Vector3(0, -3, 8), 2, new Material(new Vector3(1, 0, 0), 0.0f, 1.0f, false)));
             //Scene.Add(new Sphere(0, 3, 7, 2, new Vector3(1, 0, 0)));
             //Scene.Add(new Sphere(10, -1, 7, 2, new Vector3(1, 0, 0)));
             //Scene.Add(new Sphere(15, -1, 7, 2, new Vector3(1, 0, 0)));
@@ -26,6 +26,56 @@ namespace P
             LightSources = new List<Light>();
             LightSources.Add(new Light(new Vector3(0.0f, 8.0f, 0.0f), new Vector3(50f, 50f, 50f)));
             LightSources.Add(new Light(new Vector3(5.0f, 8.0f, 0.0f), new Vector3(50f, 50f, 50f)));
+        }
+
+        Vector3 Sample(Ray ray, int maxDepth)
+        {//Intersect our ray with every primitive in the scene.
+            for (int i = 0; i < Scene.Count; i++)
+            {
+                Scene[i].Intersect(ray);
+            }
+
+            Vector3 color = new Vector3(0.0f);
+
+            //If the ray hit an object, we set green to 1.
+            if (ray.objectHit != -1)
+            {
+
+                Vector3 normal = Scene[ray.objectHit].GetNormal(ray);
+                Vector3 collisionPosition = ray.Origin + ray.t * ray.Direction;
+                Vector3 shadowRayOrigin = collisionPosition + 0.0001f * normal;
+
+                for (int li = 0; li < LightSources.Count; li++)
+                {
+                    float inverseDistSq = 1.0f / (LightSources[li].position - shadowRayOrigin).LengthSquared;
+
+                    Ray shadowRay = new Ray(shadowRayOrigin, (LightSources[li].position - shadowRayOrigin).Normalized());
+                    for (int i = 0; i < Scene.Count; i++)
+                    {
+                        Scene[i].Intersect(shadowRay);
+                    }
+                    if (shadowRay.objectHit == -1)
+                    {
+                        Material materialHit = Scene[ray.objectHit].material;
+
+                        //TODO : Look at reflections and dielectrics instead of assuming diffuse
+
+                        for (int j = 0; j < 3; j++)
+                        {
+                            float ndotl = Vector3.Dot(shadowRay.Direction, normal);
+                            if (ndotl > 0.0f)
+                                color[j] += LightSources[li].intensity[j] * Scene[ray.objectHit].material.color[j] * inverseDistSq * ndotl;
+                        }
+                    }
+                }
+                for (int j = 0; j < 3; j++)
+                {
+                    //Ambient light
+                    //pixelColor[j] += Scene[ray.objectHit].color[j] * 0.05f;
+                }
+            }
+
+            return color;
         }
 
         public float[] GenTexture(int width, int height)
@@ -88,7 +138,6 @@ namespace P
             {
                 for (int x = 0; x < width; x++)
                 {
-                    float[] pixelColor = new float[4];
 
                     float yp = (float)y / (float)height;
                     float xp = (float)x / (float)width;
@@ -97,44 +146,7 @@ namespace P
 
                     Ray ray = new Ray(cameraPosition, (screenSpot - cameraPosition).Normalized());
 
-                    //Intersect our ray with every primitive in the scene.
-                    for (int i = 0; i < Scene.Count; i++)
-                    {
-                        Scene[i].Intersect(ray);
-                    }
-
-                    //If the ray hit an object, we set green to 1.
-                    if (ray.objectHit != -1)
-                    {
-                        Vector3 normal = Scene[ray.objectHit].GetNormal(ray);
-                        Vector3 collisionPosition = ray.Origin + ray.t * ray.Direction;
-                        Vector3 shadowRayOrigin = collisionPosition + 0.0001f * normal;
-
-                        for (int li = 0; li < LightSources.Count; li++)
-                        {
-                            float inverseDistSq = 1.0f / (LightSources[li].position - shadowRayOrigin).LengthSquared;
-
-                            Ray shadowRay = new Ray(shadowRayOrigin, (LightSources[li].position - shadowRayOrigin).Normalized());
-                            for (int i = 0; i < Scene.Count; i++)
-                            {
-                                Scene[i].Intersect(shadowRay);
-                            }
-                            if (shadowRay.objectHit == -1)
-                            {
-                                for (int j = 0; j < 3; j++)
-                                {
-                                    float ndotl = Vector3.Dot(shadowRay.Direction, normal);
-                                    if (ndotl > 0.0f)
-                                        pixelColor[j] += LightSources[li].intensity[j] * Scene[ray.objectHit].material.color[j] * inverseDistSq * ndotl;
-                                }
-                            }
-                        }
-                        for (int j = 0; j < 3; j++)
-                        {
-                            //Ambient light
-                            //pixelColor[j] += Scene[ray.objectHit].color[j] * 0.05f;
-                        }
-                    }
+                    Vector4 pixelColor = new Vector4(Sample(ray, 20), 1.0f);                    
 
                     //Put the pixel values in the output image.
                     for (int i = 0; i < 4; i++)

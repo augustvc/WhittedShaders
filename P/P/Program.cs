@@ -20,7 +20,7 @@ namespace P
         {
             using (Game game = new Game(1080, 940, "GPU Ray Tracer"))
             {
-                game.Run(0.0);
+                game.Run(0.0, 0.0);
             }
         }
 
@@ -89,6 +89,9 @@ namespace P
                 Console.WriteLine("Render time: " + RenderTime);
                 Console.WriteLine("Render fps: " + RenderFrequency);
                 renderCheckTime = renderCheckInterval;
+
+                Console.WriteLine("Update time" + UpdateTime);
+                Console.WriteLine("Update fps: " + UpdateFrequency);
             }
             base.OnRenderFrame(e);
         }
