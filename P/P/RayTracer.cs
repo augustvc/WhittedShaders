@@ -19,7 +19,7 @@ namespace P
             Scene = new List<Primitive>();
             Scene.Add(new Sphere(new Vector3(0, 0, 4), 2, new Material(new Vector3(0, 0, 0), 0.0f, 0.0f, true, false, 2.1f)));
             Scene.Add(new Sphere(new Vector3(4, 0, 8), 2, new Material(new Vector3(1, 1, 1), 0.0f, 1.0f, false)));
-            Scene.Add(new Plane(new Vector3(0, 1, 0), -5, new Material(new Vector3(0, 1, 1), 1.0f, 0.0f, false, false)));
+            Scene.Add(new Plane(new Vector3(0, 1, 0), -5, new Material(new Vector3(0, 1, 1), 1.0f, 0.0f, false, true)));
             Scene.Add(new Plane(new Vector3(0, 0, -1), -55, new Material(new Vector3(8, 8, 1), 1.0f, 0.0f, false)));
             LightSources = new List<Light>();
             LightSources.Add(new Light(new Vector3(0.0f, 8.0f, 0.0f), new Vector3(50f, 50f, 50f)));
@@ -53,30 +53,30 @@ namespace P
 
 
                 Material materialHit = Scene[ray.objectHit].material;
+                Vector3 materialColor = materialHit.color;
 
-                if (materialHit.diffuse > 0.0f) {
-                    Vector3 materialColor = materialHit.color;
+                if (materialHit.isCheckerd)
+                {
 
-                    if (materialHit.isCheckerd)
+                    Vector3 pointOnPlane = Scene[ray.objectHit].GetPointOnSurface(ray);
+                    //Console.WriteLine(pointOnPlane);
+                    Vector3 direction = shadowRayOrigin - pointOnPlane;
+                    Vector3 left = Vector3.Cross(direction, normal);
+                    Vector3 right = -left;
+                    left.Normalize();
+                    right.Normalize();
+
+                    if (Math.Floor(shadowRayOrigin.X) % 2 == 0 ^ Math.Floor(shadowRayOrigin.Z) % 2 == 0)
                     {
-                        Vector3 pointOnPlane = Scene[ray.objectHit].GetPointOnSurface(ray);
-                        //Console.WriteLine(pointOnPlane);
-                        Vector3 direction = shadowRayOrigin - pointOnPlane;
-                        Vector3 left = Vector3.Cross(direction, normal);
-                        Vector3 right = -left;
-                        left.Normalize();
-                        right.Normalize();
-
-                        if (Math.Floor(shadowRayOrigin.X) % 2 == 0 ^ Math.Floor(shadowRayOrigin.Z) % 2 == 0)
-                        {
-                            materialColor = new Vector3(0.0f);
-                        }
-                        else
-                        {
-                            materialColor = new Vector3(1.0f);
-                        }
-
+                        materialColor = new Vector3(0.0f);
                     }
+                    else
+                    {
+                        materialColor = new Vector3(1.0f);
+                    }
+                }
+                if (materialHit.diffuse > 0.0f)
+                {
                     for (int li = 0; li < LightSources.Count; li++)
                     {
                         float inverseDistSq = 1.0f / (LightSources[li].position - shadowRayOrigin).LengthSquared;
@@ -245,14 +245,14 @@ namespace P
             }
 
 
-
-            Parallel.For(0, height, (y) =>
+            var aap = 2;
+            Parallel.For(0, height * aap, (y) =>
             {
-                for (int x = 0; x < width; x++)
+                for (int x = 0; x < width * aap; x++)
                 {
 
-                    float yp = (float)y / (float)height;
-                    float xp = (float)x / (float)width;
+                    float yp = (float)y / ((float)height * aap);
+                    float xp = (float)x / ((float)width * aap);
 
                     Vector3 screenSpot = BottomLeft + xp * xArm + yp * yArm;
 
@@ -262,16 +262,16 @@ namespace P
 
                     if ((y == height / 2) && (x == width / 2))
                     {
-                        Console.WriteLine("Doing the middle pixel:");
-                        Console.WriteLine("----------------------------------------------");
+                        //Console.WriteLine("Doing the middle pixel:");
+                        //Console.WriteLine("----------------------------------------------");
                     }
-                    Vector4 pixelColor = new Vector4(Sample(ray, recursionDepth, (y == height / 2) && (x == width / 2)), 1.0f);
+                    Vector4 pixelColor = new Vector4(Sample(ray, recursionDepth, false), 1.0f);
                     if ((y == height / 2) && (x == width / 2))
                     {
-                        pixelColor = new Vector4(0.0f, 0.0f, 1.0f, 1.0f);
+                        //pixelColor = new Vector4(0.0f, 0.0f, 1.0f, 1.0f);
                     }
 
-                    int index = (y * width + x) * 4;
+                    int index = ((y / aap) * width + (x / aap)) * 4;
                     //Put the pixel values in the output image.
                     for (int i = 0; i < 4; i++)
                     {
@@ -281,6 +281,16 @@ namespace P
             });
 
             return output;
+        }
+
+        public Vector3 RotateCW90(Vector3 aDir)
+        {
+            return new Vector3(aDir.Z, 0, -aDir.X);
+        }
+
+        public Vector3 RotateCCW90(Vector3 aDir)
+        {
+            return new Vector3(-aDir.Z, 0, aDir.X);
         }
     }
 }
