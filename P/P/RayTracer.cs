@@ -103,28 +103,30 @@ namespace P
 
             float pi = 3.148f;
             float aperture = 1.0f;
+            Vector2 center = new Vector2(ScreenCenter.X / 2, ScreenCenter.Y / 2);
+            Vector2 rel = new Vector2(ScreenCenter.X - center.X, ScreenCenter.Y - center.Y);
 
 
+            float radius = (float)Math.Atan2(Math.Sqrt(rel.X * rel.X + rel.Y * rel.Y), (float)screenDistance) / pi;
+            float phi = (float)Math.Atan2(Norm.Y, Norm.X);
 
-            double radius = Math.Atan2(Math.Sqrt(Norm.X * Norm.X + Norm.Y * Norm.Y), (double)screenDistance) / pi;
-            double phi = Math.Atan2(Norm.Y, Norm.X);
+            //double u = radius * Math.Cos(phi) + 0.5;
+            //double v = radius * Math.Sin(phi) + 0.5;
 
-            double u = radius * Math.Cos(phi) + 0.5;
-            double v = radius * Math.Sin(phi) + 0.5;
-
-            double theta = radius * aperture / 2;
+            float theta = (float)Math.Atan2(rel.X, rel.Y);
+            theta += radius * aperture;
 
             if (radius == 0)
             {
                 phi = 0;
             }
-            else if (Norm.X < 0)
+            else if (rel.X < 0)
             {
-                phi = pi - Math.Asin(Norm.Y / radius);
+                phi = pi - (float)Math.Asin(Norm.Y / radius);
             }
-            else if (Norm.X >= 0)
+            else if (rel.X >= 0)
             {
-                phi = Math.Asin(Norm.Y / radius);
+                phi = (float)Math.Asin(Norm.Y / radius);
             }
 
             ViewDirection.X = (float)(Math.Sin(theta) * Math.Cos(phi));
@@ -146,7 +148,7 @@ namespace P
 
                     Ray ray = new Ray(cameraPosition, (screenSpot - cameraPosition).Normalized());
 
-                    Vector4 pixelColor = new Vector4(Sample(ray, 20), 1.0f);                    
+                    Vector4 pixelColor = new Vector4(Sample(ray, 20), 1.0f);
 
                     //Put the pixel values in the output image.
                     for (int i = 0; i < 4; i++)
