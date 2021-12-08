@@ -23,7 +23,7 @@ namespace P
             Scene.Add(new Sphere(new Vector3(15, -1, 7), 2, new Material(new Vector3(1, 0, 0), 1.0f, 0.0f, false)));
             Scene.Add(new Sphere(new Vector3(-5, -1, 7), 2, new Material(new Vector3(1, 0, 0), 1.0f, 0.0f, false)));
             Scene.Add(new Sphere(new Vector3(-10, -1, 7), 2, new Material(new Vector3(1, 0, 0), 1.0f, 0.0f, false)));
-            Scene.Add(new Plane(new Vector3(0, 1, 0), -5, new Material(new Vector3(0, 1, 0), 1.0f, 0.0f, false, true)));
+            Scene.Add(new Plane(new Vector3(2, 12, 0), -5, new Material(new Vector3(0, 1, 0), 1.0f, 0.0f, false, true)));
             Scene.Add(new Plane(new Vector3(0, 0, -1), -16, new Material(new Vector3(8, 8, 1), 1.0f, 0.0f, false)));
             LightSources = new List<Light>();
             LightSources.Add(new Light(new Vector3(0.0f, 8.0f, 0.0f), new Vector3(50f, 50f, 50f)));
@@ -55,12 +55,11 @@ namespace P
                     Vector3 pointOnPlane = Scene[ray.objectHit].GetPointOnSurface(ray);
                     //Console.WriteLine(pointOnPlane);
                     Vector3 direction = shadowRayOrigin - pointOnPlane;
-                    Vector3 left = Vector3.Cross(direction, normal);
-                    Vector3 right = -left;
-                    left.Normalize();
-                    right.Normalize();
+                    Vector3 left = RotateCCW90(normal - pointOnPlane).Normalized();
+                    Vector3 right = Vector3.Cross(-left, normal).Normalized();
 
-                    if (Math.Floor(shadowRayOrigin.X) % 2 == 0 ^ Math.Floor(shadowRayOrigin.Z) % 2 == 0)
+
+                    if (Math.Floor(Vector3.Dot(direction, left)) % 2 == 0 ^ Math.Floor(Vector3.Dot(direction, right)) % 2 == 0)
                     {
                         materialColor = new Vector3(0.0f);
                     }
@@ -68,6 +67,7 @@ namespace P
                     {
                         materialColor = new Vector3(1.0f);
                     }
+
 
                 }
                 if (materialHit.diffuse > 0.0f)
@@ -205,6 +205,16 @@ namespace P
             });
 
             return output;
+        }
+
+        public Vector3 RotateCW90(Vector3 aDir)
+        {
+            return new Vector3(aDir.Z, 0, -aDir.X);
+        }
+
+        public Vector3 RotateCCW90(Vector3 aDir)
+        {
+            return new Vector3(-aDir.Z, 0, aDir.X);
         }
     }
 }
