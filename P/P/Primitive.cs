@@ -15,6 +15,7 @@ namespace P
         public abstract void Intersect(Ray ray);
 
         public abstract Vector3 GetNormal(Ray ray);
+        public abstract Vector3 GetPointOnSurface(Ray ray);
 
 
         public Primitive()

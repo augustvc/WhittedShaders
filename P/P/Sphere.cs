@@ -18,7 +18,7 @@ namespace P
             float t = Vector3.Dot(toOrg, ray.Direction);
             Vector3 diff = toOrg - (t * ray.Direction);
             float dsq = Vector3.Dot(diff, diff);
-            if(dsq > radiusSq)
+            if (dsq > radiusSq)
                 return;
             t -= (float)Math.Sqrt(radiusSq - dsq);
 
@@ -46,6 +46,11 @@ namespace P
             this.radius = radius;
             radiusSq = radius * radius;
             this.material = mat;
+        }
+
+        public override Vector3 GetPointOnSurface(Ray ray)
+        {
+            throw new NotImplementedException();
         }
 
     }

@@ -10,15 +10,16 @@ namespace P
     class Material
     {
         public Vector3 color;
-
+        public bool isCheckerd;
         public float diffuse, specular;
         public bool dielectric;
         public float refractionIndex = 1.0f;
 
         //Note: for dielectrics, extinction rate = color.
-        public Material(Vector3 color, float diffuse, float specular, bool dielectric, float refractionIndex = 1.5f)
+        public Material(Vector3 color, float diffuse, float specular, bool dielectric, bool isCheckered = false, float refractionIndex = 1.5f)
         {
             this.color = color;
+            this.isCheckerd = isCheckered;
             this.refractionIndex = refractionIndex;
             if (dielectric)
             {
@@ -26,7 +27,7 @@ namespace P
                 specular = 0;
             }
             this.dielectric = dielectric;
-            
+
             this.diffuse = diffuse;
             this.specular = specular;
         }
