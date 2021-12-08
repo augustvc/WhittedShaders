@@ -11,17 +11,10 @@ namespace P
     {
 
         Vector3 normal;
-
         float offset;
-
-
 
         public override void Intersect(Ray ray)
         {
-
-
-
-
             float denominator = Vector3.Dot(-normal, ray.Direction);
 
             if (denominator > 0.0001)
@@ -37,28 +30,27 @@ namespace P
                 }
                 if (t > ray.t)
                 {
-
                     return;
                 }
                 ray.t = t;
                 ray.objectHit = GetID();
-
             }
-            return;
         }
 
         public override Vector3 GetNormal(Ray ray)
         {
-            return normal;
+            if (Vector3.Dot(ray.Direction, normal) < 0.0)
+            {
+                return normal;
+            }
+            return -normal;
         }
-
 
         public Plane(Vector3 normal, float offset, Material mat) : base()
         {
             this.normal = normal.Normalized();
             this.offset = offset;
-
-
+            this.material = mat;
         }
 
     }

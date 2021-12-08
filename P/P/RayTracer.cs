@@ -19,10 +19,10 @@ namespace P
             Scene.Add(new Sphere(new Vector3(0, 3, 7), 2, new Material(new Vector3(1, 0, 0), 1.0f, 0.0f, false)));
             Scene.Add(new Sphere(new Vector3(10, -1, 7), 2, new Material(new Vector3(1, 0, 0), 1.0f, 0.0f, false)));
             Scene.Add(new Sphere(new Vector3(15, -1, 7), 2, new Material(new Vector3(1, 0, 0), 1.0f, 0.0f, false)));
-            Scene.Add(new Sphere(new Vector3(20, -1, 7), 2, new Material(new Vector3(1, 0, 0), 1.0f, 0.0f, false)));
             Scene.Add(new Sphere(new Vector3(-5, -1, 7), 2, new Material(new Vector3(1, 0, 0), 1.0f, 0.0f, false)));
             Scene.Add(new Sphere(new Vector3(-10, -1, 7), 2, new Material(new Vector3(1, 0, 0), 1.0f, 0.0f, false)));
             Scene.Add(new Plane(new Vector3(0, 1, 0), -5, new Material(new Vector3(0, 1, 0), 1.0f, 0.0f, false)));
+            Scene.Add(new Plane(new Vector3(0, 0, -1), -16, new Material(new Vector3(1, 1, 1), 0.0f, 1.0f, false)));
             LightSources = new List<Light>();
             LightSources.Add(new Light(new Vector3(0.0f, 8.0f, 0.0f), new Vector3(50f, 50f, 50f)));
             LightSources.Add(new Light(new Vector3(5.0f, 8.0f, 0.0f), new Vector3(50f, 50f, 50f)));
@@ -37,41 +37,47 @@ namespace P
 
             Vector3 color = new Vector3(0.0f);
 
-            //If the ray hit an object, we set green to 1.
             if (ray.objectHit != -1)
             {
-
                 Vector3 normal = Scene[ray.objectHit].GetNormal(ray);
                 Vector3 collisionPosition = ray.Origin + ray.t * ray.Direction;
                 Vector3 shadowRayOrigin = collisionPosition + 0.0001f * normal;
 
-                for (int li = 0; li < LightSources.Count; li++)
-                {
-                    float inverseDistSq = 1.0f / (LightSources[li].position - shadowRayOrigin).LengthSquared;
-
-                    Ray shadowRay = new Ray(shadowRayOrigin, (LightSources[li].position - shadowRayOrigin).Normalized());
-                    for (int i = 0; i < Scene.Count; i++)
+                Material materialHit = Scene[ray.objectHit].material;
+                if (materialHit.diffuse > 0.0f) {
+                    for (int li = 0; li < LightSources.Count; li++)
                     {
-                        Scene[i].Intersect(shadowRay);
-                    }
-                    if (shadowRay.objectHit == -1)
-                    {
-                        Material materialHit = Scene[ray.objectHit].material;
+                        float inverseDistSq = 1.0f / (LightSources[li].position - shadowRayOrigin).LengthSquared;
 
-                        //TODO : Look at reflections and dielectrics instead of assuming diffuse
-
-                        for (int j = 0; j < 3; j++)
+                        Ray shadowRay = new Ray(shadowRayOrigin, (LightSources[li].position - shadowRayOrigin).Normalized(), (LightSources[li].position - shadowRayOrigin).Length);
+                        for (int i = 0; i < Scene.Count; i++)
+                        {
+                            Scene[i].Intersect(shadowRay);
+                        }
+                        if (shadowRay.objectHit == -1)
                         {
                             float ndotl = Vector3.Dot(shadowRay.Direction, normal);
+
                             if (ndotl > 0.0f)
-                                color[j] += LightSources[li].intensity[j] * Scene[ray.objectHit].material.color[j] * inverseDistSq * ndotl;
+                            {
+                                for (int j = 0; j < 3; j++)
+                                {
+                                    color[j] += materialHit.diffuse * LightSources[li].intensity[j] * materialHit.color[j] * inverseDistSq * ndotl;
+                                }
+                            }
                         }
                     }
+                }
+
+                if(materialHit.specular > 0.0f)
+                {
+                    Ray reflection = new Ray(shadowRayOrigin, ray.Direction + (Vector3.Dot(-ray.Direction, normal) * normal * 2));
+                    color += Sample(reflection, maxDepth - 1);
                 }
                 for (int j = 0; j < 3; j++)
                 {
                     //Ambient light
-                    //pixelColor[j] += Scene[ray.objectHit].color[j] * 0.05f;
+                    //color[j] += materialHit.color[j] * 0.05f;
                 }
             }
 

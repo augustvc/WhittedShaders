@@ -14,10 +14,11 @@ namespace P
         public Vector3 Direction;
         public int objectHit = -1;
 
-        public Ray(Vector3 Origin, Vector3 Direction)
+        public Ray(Vector3 Origin, Vector3 Direction, float maxT = float.MaxValue)
         {
             this.Origin = Origin;
             this.Direction = Direction;
+            this.t = maxT;
         }
     }
 }

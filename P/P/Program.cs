@@ -195,13 +195,6 @@ namespace P
             base.OnUpdateFrame(e);
         }
 
-        protected override void OnMouseMove(MouseMoveEventArgs e)
-        {
-            Camera.OnMouseMove(this);
-
-            base.OnMouseMove(e);
-        }
-
         protected override void OnMouseWheel(MouseWheelEventArgs e)
         {
 

@@ -31,7 +31,13 @@ namespace P
         public override Vector3 GetNormal(Ray ray)
         {
             Vector3 collisionPoint = ray.Origin + ray.Direction * ray.t;
-            return (collisionPoint - Location).Normalized();
+            Vector3 normal = (collisionPoint - Location).Normalized();
+
+            if (Vector3.Dot(ray.Direction, normal) < 0.0)
+            {
+                return normal;
+            }
+            return -normal;
         }
 
         public Sphere(Vector3 Origin, float radius, Material mat) : base()
