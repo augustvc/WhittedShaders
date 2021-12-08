@@ -18,12 +18,12 @@ namespace P
         {
             Scene = new List<Primitive>();
             Scene.Add(new Sphere(new Vector3(0, -3, 8), 2, new Material(new Vector3(1, 0, 0), 0.0f, 1.0f, false)));
-            //Scene.Add(new Sphere(0, 3, 7, 2, new Vector3(1, 0, 0)));
-            //Scene.Add(new Sphere(10, -1, 7, 2, new Vector3(1, 0, 0)));
-            //Scene.Add(new Sphere(15, -1, 7, 2, new Vector3(1, 0, 0)));
-            //Scene.Add(new Sphere(20, -1, 7, 2, new Vector3(1, 0, 0)));
-            //Scene.Add(new Sphere(-5, -1, 7, 2, new Vector3(1, 0, 0)));
-            //Scene.Add(new Sphere(-10, -1, 7, 2, new Vector3(1, 0, 0)));
+            Scene.Add(new Sphere(new Vector3(0, 3, 7), 2, new Material(new Vector3(1, 0, 0), 1.0f, 0.0f, false)));
+            Scene.Add(new Sphere(new Vector3(10, -1, 7), 2, new Material(new Vector3(1, 0, 0), 1.0f, 0.0f, false)));
+            Scene.Add(new Sphere(new Vector3(15, -1, 7), 2, new Material(new Vector3(1, 0, 0), 1.0f, 0.0f, false)));
+            Scene.Add(new Sphere(new Vector3(20, -1, 7), 2, new Material(new Vector3(1, 0, 0), 1.0f, 0.0f, false)));
+            Scene.Add(new Sphere(new Vector3(-5, -1, 7), 2, new Material(new Vector3(1, 0, 0), 1.0f, 0.0f, false)));
+            Scene.Add(new Sphere(new Vector3(-10, -1, 7), 2, new Material(new Vector3(1, 0, 0), 1.0f, 0.0f, false)));
             Scene.Add(new Plane(new Vector3(0, 1, 0), -5, new Material(new Vector3(0, 1, 0), 1.0f, 0.0f, false)));
             LightSources = new List<Light>();
             LightSources.Add(new Light(new Vector3(0.0f, 8.0f, 0.0f), new Vector3(50f, 50f, 50f)));
@@ -149,9 +149,8 @@ namespace P
             }
 
 
-            int index = 0;
 
-            for (int y = 0; y < height; y++)
+            Parallel.For(0, height, (y) =>
             {
                 for (int x = 0; x < width; x++)
                 {
@@ -165,14 +164,14 @@ namespace P
 
                     Vector4 pixelColor = new Vector4(Sample(ray, 20), 1.0f);
 
+                    int index = (y * width + x) * 4;
                     //Put the pixel values in the output image.
                     for (int i = 0; i < 4; i++)
                     {
                         output[index + i] = pixelColor[i];
                     }
-                    index += 4;
                 }
-            }
+            });
 
             return output;
         }

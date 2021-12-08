@@ -101,7 +101,7 @@ public static class Camera
     static float prevY;
 
 
-    public static void OnMouseMove(MouseMoveEventArgs e, GameWindow program)
+    public static void OnMouseMove(GameWindow program)
     {
         MouseState ms = Mouse.GetState();
 
@@ -141,6 +141,7 @@ public static class Camera
                 cameraUp = Vector3.Normalize(cameraUp);
             }
         }
+
         prevX = ms.X;
         prevY = ms.Y;
     }

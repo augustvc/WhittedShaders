@@ -7,6 +7,7 @@ using OpenTK.Graphics;
 using OpenTK.Input;
 using OpenTK.Graphics.OpenGL;
 using OpenTK;
+using System.Threading;
 
 namespace P
 {
@@ -20,7 +21,7 @@ namespace P
         {
             using (Game game = new Game(1080, 940, "GPU Ray Tracer"))
             {
-                game.Run(0.0, 0.0);
+                game.Run(60.0, 0.0);
             }
         }
 
@@ -37,9 +38,27 @@ namespace P
         RayTracer rayTracer;
         GPURayTracer gpuRayTracer;
 
+        bool mouseThreadStop = false;
+
+        private void MouseUpdate()
+        {
+            Camera.OnMouseMove(this);
+            Thread.Sleep(1);
+            if(!mouseThreadStop)
+            {
+                MouseUpdate();
+            }
+        }
 
         protected override void OnLoad(EventArgs e)
         {
+            Thread t = new Thread(MouseUpdate);
+            t.Start();
+
+            TargetUpdateFrequency = 60.0;
+            Console.WriteLine("update period: " + this.UpdatePeriod);
+            Console.WriteLine("update freq: " + this.UpdateFrequency);
+
             MeshLoader.Init();
             GL.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
             VAO = GL.GenVertexArray();
@@ -69,6 +88,7 @@ namespace P
             GL.DeleteBuffer(VBO);
             shader.Dispose();
             gpuRayTracer.Dispose();
+            mouseThreadStop = true;
             base.OnUnload(e);
         }
 
@@ -89,9 +109,6 @@ namespace P
                 Console.WriteLine("Render time: " + RenderTime);
                 Console.WriteLine("Render fps: " + RenderFrequency);
                 renderCheckTime = renderCheckInterval;
-
-                Console.WriteLine("Update time" + UpdateTime);
-                Console.WriteLine("Update fps: " + UpdateFrequency);
             }
             base.OnRenderFrame(e);
         }
@@ -180,8 +197,7 @@ namespace P
 
         protected override void OnMouseMove(MouseMoveEventArgs e)
         {
-
-            Camera.OnMouseMove(e, this);
+            Camera.OnMouseMove(this);
 
             base.OnMouseMove(e);
         }

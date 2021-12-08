@@ -25,6 +25,7 @@ namespace P
                 diffuse = 0;
                 specular = 0;
             }
+            this.dielectric = dielectric;
             
             this.diffuse = diffuse;
             this.specular = specular;
