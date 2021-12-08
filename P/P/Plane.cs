@@ -29,7 +29,7 @@ namespace P
                 Vector3 planeOrigin = normal * offset;
                 Vector3 diff = planeOrigin - ray.Origin;
                 float t = Vector3.Dot(-normal, diff) / denominator;
-                //Console.WriteLine(t);
+
 
                 if (t < 0)
                 {
