@@ -44,7 +44,7 @@ namespace P
         {
             Camera.OnMouseMove(this);
             Thread.Sleep(1);
-            if(!mouseThreadStop)
+            if (!mouseThreadStop)
             {
                 MouseUpdate();
             }
@@ -94,7 +94,7 @@ namespace P
 
         protected override void OnRenderFrame(FrameEventArgs e)
         {
-            if (useGPU)
+            if (!useGPU)
             {
                 GPUFrame();
             }

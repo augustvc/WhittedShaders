@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using OpenTK.Input;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,23 +17,16 @@ namespace P
         public RayTracer()
         {
             Scene = new List<Primitive>();
-            //Scene.Add(new Sphere(new Vector3(0, -3, 8), 2, new Material(new Vector3(1, 0, 1), 0.0f, 1.0f, false)));
-            Scene.Add(new Sphere(new Vector3(0, 3, 7), 2, new Material(new Vector3(1, 1, 0), 1.0f, 0.0f, false)));
-            //Scene.Add(new Sphere(new Vector3(10, -1, 7), 2, new Material(new Vector3(1, 1, 1), 1.0f, 0.0f, false)));
-
-            //For glass, instead of color, the material contains extinction rate
-            Scene.Add(new Sphere(new Vector3(15, -1, 7), 2, new Material(new Vector3(0, 0, 0), 0.0f, 0.0f, true)));
-            
-            //Scene.Add(new Sphere(new Vector3(-5, -1, 7), 2, new Material(new Vector3(0, 1, 0), 1.0f, 0.0f, false)));
-            //Scene.Add(new Sphere(new Vector3(-10, -1, 7), 2, new Material(new Vector3(0, 0, 0), 1.0f, 0.0f, false)));
-            Scene.Add(new Plane(new Vector3(0, 1, 0), -5, new Material(new Vector3(0, 1, 0), 1.0f, 0.0f, false)));
-            //Scene.Add(new Plane(new Vector3(0, 0, -1), -16, new Material(new Vector3(1, 1, 1), 0.0f, 1.0f, false)));
+            Scene.Add(new Sphere(new Vector3(0, 0, 4), 2, new Material(new Vector3(0, 0, 0), 0.0f, 0.0f, true, false, 2.1f)));
+            Scene.Add(new Sphere(new Vector3(4, 0, 8), 2, new Material(new Vector3(1, 1, 1), 0.0f, 1.0f, false)));
+            Scene.Add(new Plane(new Vector3(0, 1, 0), -5, new Material(new Vector3(0, 1, 1), 1.0f, 0.0f, false, false)));
+            Scene.Add(new Plane(new Vector3(0, 0, -1), -55, new Material(new Vector3(8, 8, 1), 1.0f, 0.0f, false)));
             LightSources = new List<Light>();
             LightSources.Add(new Light(new Vector3(0.0f, 8.0f, 0.0f), new Vector3(50f, 50f, 50f)));
             LightSources.Add(new Light(new Vector3(5.0f, 8.0f, 0.0f), new Vector3(50f, 50f, 50f)));
         }
 
-        Vector3 Sample(Ray ray, int maxDepth)
+        Vector3 Sample(Ray ray, int maxDepth, bool debugging = false)
         {//Intersect our ray with every primitive in the scene.
             if(maxDepth < 0)
             {
@@ -46,15 +39,44 @@ namespace P
 
             Vector3 color = new Vector3(0.0f);
 
+            if(debugging)
+            {
+                Console.WriteLine("ray with dir: " + ray.Direction + " hit primitive number: " + ray.objectHit + " after " + ray.t);
+            }
+
             if (ray.objectHit != -1)
             {
                 Vector3 normal = Scene[ray.objectHit].GetNormal(ray);
                 Vector3 collisionPosition = ray.Origin + ray.t * ray.Direction;
                 Vector3 shadowRayOrigin = collisionPosition + 0.0001f * normal;
 
+
+
                 Material materialHit = Scene[ray.objectHit].material;
 
                 if (materialHit.diffuse > 0.0f) {
+                    Vector3 materialColor = materialHit.color;
+
+                    if (materialHit.isCheckerd)
+                    {
+                        Vector3 pointOnPlane = Scene[ray.objectHit].GetPointOnSurface(ray);
+                        //Console.WriteLine(pointOnPlane);
+                        Vector3 direction = shadowRayOrigin - pointOnPlane;
+                        Vector3 left = Vector3.Cross(direction, normal);
+                        Vector3 right = -left;
+                        left.Normalize();
+                        right.Normalize();
+
+                        if (Math.Floor(shadowRayOrigin.X) % 2 == 0 ^ Math.Floor(shadowRayOrigin.Z) % 2 == 0)
+                        {
+                            materialColor = new Vector3(0.0f);
+                        }
+                        else
+                        {
+                            materialColor = new Vector3(1.0f);
+                        }
+
+                    }
                     for (int li = 0; li < LightSources.Count; li++)
                     {
                         float inverseDistSq = 1.0f / (LightSources[li].position - shadowRayOrigin).LengthSquared;
@@ -72,7 +94,7 @@ namespace P
                             {
                                 for (int j = 0; j < 3; j++)
                                 {
-                                    color[j] += materialHit.diffuse * LightSources[li].intensity[j] * materialHit.color[j] * inverseDistSq * ndotl;
+                                    color[j] += materialHit.diffuse * LightSources[li].intensity[j] * materialColor[j] * inverseDistSq * ndotl;
                                 }
                             }
                         }
@@ -85,19 +107,36 @@ namespace P
                 {
                     float n1 = ray.refractionIndex;
                     float n2 = materialHit.refractionIndex;
-                    float n1Overn2 = n1 / n2;
-
+                    
                     if(Vector3.Dot(ray.Direction, normal) > 0)
                     {
+                        if(debugging)
+                        {
+                            Console.WriteLine("Pointing out");
+                        }
+                        n2 = 1.0f; //Pointing out
                         normal = -normal;
+                    } else if(debugging)
+                    {
+                        Console.WriteLine("Not pointing out");
                     }
+                    if (debugging)
+                    {
+                        Console.WriteLine("ray direction: " + ray.Direction);
+                        Console.WriteLine("normal: " + normal);
+                        Console.WriteLine("N1: " + n1);
+                        Console.WriteLine("n2: " + n2);
+                        Console.WriteLine("Ray t: " + ray.t);
+                    }
+
+                    float n1Overn2 = n1 / n2;
 
                     float dot = Vector3.Dot(-ray.Direction, normal);
                     float k = 1f - (n1Overn2 * n1Overn2) * (1f - dot * dot);
                     if (k >= 0)
                     {
                         Vector3 tdir = (n1Overn2 * ray.Direction + normal * (n1Overn2 * dot - (float)Math.Sqrt(k))).Normalized();
-                        Ray transmission = new Ray(ray.Origin + tdir * 0.001f, tdir, float.MaxValue, n2);
+                        Ray transmission = new Ray(ray.Origin + ray.t * ray.Direction + tdir * 0.001f, tdir, float.MaxValue, n2);
 
                         float cosThetaT = Vector3.Dot(-normal, tdir);
 
@@ -108,7 +147,13 @@ namespace P
                                                 (n1 * cosThetaT + n2 * dot);
 
                         specular = 0.5f * (sPolarizedSqrt * sPolarizedSqrt + pPolarizedSqrt * pPolarizedSqrt);
-                        color += (1f - specular) * Sample(transmission, maxDepth - 1);
+                        
+                        if(debugging)
+                        {
+                            Console.WriteLine("Specular: " + specular);
+                        }
+
+                        color += (1f - specular) * Sample(transmission, maxDepth - 1, debugging);
                     } else
                     {
                         specular = 1.0f;
@@ -118,13 +163,13 @@ namespace P
                 if (specular > 0.0f)
                 {
                     Ray reflection = new Ray(shadowRayOrigin, ray.Direction + (Vector3.Dot(-ray.Direction, normal) * normal * 2));
-                    color += Sample(reflection, maxDepth - 1);
+                    color += specular * Sample(reflection, maxDepth - 1, false);
                 }
 
                 for (int j = 0; j < 3; j++)
                 {
                     //Ambient light
-                    //color[j] += materialHit.color[j] * 0.05f;
+                    //color[j] += materialColor[j] * 0.05f; 
                 }
             }
 
@@ -213,7 +258,18 @@ namespace P
 
                     Ray ray = new Ray(cameraPosition, (screenSpot - cameraPosition).Normalized());
 
-                    Vector4 pixelColor = new Vector4(Sample(ray, 20), 1.0f);
+                    int recursionDepth = 4;
+
+                    if ((y == height / 2) && (x == width / 2))
+                    {
+                        Console.WriteLine("Doing the middle pixel:");
+                        Console.WriteLine("----------------------------------------------");
+                    }
+                    Vector4 pixelColor = new Vector4(Sample(ray, recursionDepth, (y == height / 2) && (x == width / 2)), 1.0f);
+                    if ((y == height / 2) && (x == width / 2))
+                    {
+                        pixelColor = new Vector4(0.0f, 0.0f, 1.0f, 1.0f);
+                    }
 
                     int index = (y * width + x) * 4;
                     //Put the pixel values in the output image.

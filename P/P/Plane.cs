@@ -12,10 +12,24 @@ namespace P
 
         Vector3 normal;
         float offset;
+        public Random r = new Random();
+        public Vector3 randomPoint = new Vector3(0.0f);
+
+
 
         public override void Intersect(Ray ray)
         {
             float denominator = Vector3.Dot(-normal, ray.Direction);
+
+            if (randomPoint == new Vector3(0.0f, 0.0f, 0.0f))
+            {
+                randomPoint.X = (float)r.NextDouble();
+                randomPoint.Y = (float)r.NextDouble();
+                randomPoint.Z = (float)r.NextDouble();
+
+                randomPoint.Normalize();
+            }
+
 
             if (denominator > 0.0001)
             {
@@ -44,6 +58,16 @@ namespace P
                 return normal;
             }
             return -normal;
+        }
+
+        public override Vector3 GetPointOnSurface(Ray ray)
+        {
+
+            Vector3 pointToPlane = new Vector3(randomPoint.X - normal.X, randomPoint.Y - normal.Y, randomPoint.Z - normal.Z);
+            float normalRandom = Vector3.Dot(pointToPlane, normal);
+            Vector3 pointOnPlane = pointToPlane + normalRandom * normal;
+            return pointOnPlane;
+
         }
 
         public Plane(Vector3 normal, float offset, Material mat) : base()
