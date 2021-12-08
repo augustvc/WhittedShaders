@@ -20,12 +20,19 @@ namespace P
             float dsq = Vector3.Dot(diff, diff);
             if (dsq > radiusSq)
                 return;
-            t -= (float)Math.Sqrt(radiusSq - dsq);
+            float sqrtThing = (float)Math.Sqrt(radiusSq - dsq);
 
-            if (t < 0) return;
-            if (t > ray.t) return;
-            ray.t = t;
-            ray.objectHit = GetID();
+            t -= sqrtThing;
+            if(t >= 0 && t <= ray.t) { 
+                ray.t = t;
+                ray.objectHit = GetID();
+            }
+            t += sqrtThing * 2;
+            if (t >= 0 && t <= ray.t)
+            {
+                ray.t = t;
+                ray.objectHit = GetID();
+            }
         }
 
         public override Vector3 GetNormal(Ray ray)
@@ -33,11 +40,7 @@ namespace P
             Vector3 collisionPoint = ray.Origin + ray.Direction * ray.t;
             Vector3 normal = (collisionPoint - Location).Normalized();
 
-            if (Vector3.Dot(ray.Direction, normal) < 0.0)
-            {
-                return normal;
-            }
-            return -normal;
+            return normal;
         }
 
         public Sphere(Vector3 Origin, float radius, Material mat) : base()
