@@ -116,7 +116,7 @@ int intersect(inout Ray ray) {
 		}
 	}
 
-	/*int i = 1;
+	int i = 1;
 	while(i <= indexBuffer[0]) {
 		uint triAI = indexBuffer[i++];
 		uint triBI = indexBuffer[i++];
@@ -154,8 +154,8 @@ int intersect(inout Ray ray) {
 		if (t < ray.t) {
 			ray.t = t;
 			primID = 30000 + i - 3;
-		}
-	}*/
+		}+
+	}
 
 	for (int i = 0; i < triangles.length(); i++) {
 		Triangle tri = triangles[i];

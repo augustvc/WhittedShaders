@@ -12,7 +12,7 @@ namespace P
 
         Vector3 normal;
         float offset;
-        public Random r = new Random();
+        public Random r = new Random(5);
         public Vector3 randomPoint = new Vector3(0.0f);
 
 
