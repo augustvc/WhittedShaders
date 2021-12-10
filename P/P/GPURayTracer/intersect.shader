@@ -154,7 +154,7 @@ int intersect(inout Ray ray) {
 		if (t < ray.t) {
 			ray.t = t;
 			primID = 30000 + i - 3;
-		}+
+		}
 	}
 
 	for (int i = 0; i < triangles.length(); i++) {

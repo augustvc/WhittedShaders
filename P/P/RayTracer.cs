@@ -245,7 +245,7 @@ namespace P
             }
 
 
-            var aap = 2;
+            var aap = 1;
             Parallel.For(0, height * aap, (y) =>
             {
                 for (int x = 0; x < width * aap; x++)

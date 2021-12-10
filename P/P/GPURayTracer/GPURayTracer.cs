@@ -50,6 +50,10 @@ namespace P
             }
             if (vertexBO == -1) vertexBO = GL.GenBuffer();
 
+            Console.WriteLine("Buffer data: " + MeshLoader.vertices.Length);
+            Console.WriteLine("First: " + MeshLoader.vertices[0]);
+            Console.WriteLine("Indices data: " + MeshLoader.indices.Count);
+            Console.WriteLine("First: " + MeshLoader.indices[0]);
             GL.BindBuffer(BufferTarget.ShaderStorageBuffer, vertexBO);
             GL.BufferData(BufferTarget.ShaderStorageBuffer, MeshLoader.vertices.Length * sizeof(float), MeshLoader.vertices, BufferUsageHint.StaticDraw);
             GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 5, vertexBO);
@@ -57,11 +61,6 @@ namespace P
             GL.BindBuffer(BufferTarget.ShaderStorageBuffer, faceBO);
             GL.BufferData(BufferTarget.ShaderStorageBuffer, MeshLoader.indices.Count * sizeof(uint), MeshLoader.indices.ToArray(), BufferUsageHint.StaticDraw);
             GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 6, faceBO);
-
-            GL.UseProgram(bruteFirstHitProgram);
-            GL.Uniform1(GL.GetUniformLocation(bruteFirstHitProgram, "trianglesInBuffer"), 100000);
-            GL.UseProgram(shadingProgram);
-            GL.Uniform1(GL.GetUniformLocation(shadingProgram, "trianglesInBuffer"), 100000);
 
             GL.UseProgram(shadingProgram);
 

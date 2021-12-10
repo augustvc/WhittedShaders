@@ -66,7 +66,6 @@ public static class Camera
         KeyboardState input = Keyboard.GetState();
         if (input.IsKeyDown(Key.D))
         {
-
             cameraPosition += cameraRight * cameraSpeed * (float)e.Time; //Forward 
         }
 

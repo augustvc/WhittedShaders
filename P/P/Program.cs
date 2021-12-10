@@ -19,7 +19,7 @@ namespace P
         bool useGPU = true;
         static void Main(string[] args)
         {
-            using (Game game = new Game(1080, 940, "GPU Ray Tracer"))
+            using (Game game = new Game(800, 600, "GPU Ray Tracer"))
             {
                 game.Run(60.0, 0.0);
             }
@@ -96,11 +96,11 @@ namespace P
         {
             if (!useGPU)
             {
-                GPUFrame();
+                CPUFrame();
             }
             else
             {
-                CPUFrame();
+                GPUFrame();
             }
             renderCheckTime -= e.Time;
             if (renderCheckTime < 0.0)

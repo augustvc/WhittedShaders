@@ -97,10 +97,15 @@ namespace P
                         {
                             indices.Add((uint)model.Meshes[i].Faces[j].Indices[k]);
                         }
-                        for(int k = 1; k < 4; k++)
+                        for(int k = 0; k < 4; k++)
                         {
+                            if(k == 1)
+                            {
+                                continue;
+                            }
                             indices.Add((uint)model.Meshes[i].Faces[j].Indices[k]);
                         }
+                        indices[0] += 6;
                     }
                     else if (model.Meshes[i].Faces[j].IndexCount == 3)
                     {
