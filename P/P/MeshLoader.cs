@@ -86,6 +86,9 @@ namespace P
                 j = 0;
                 indices = new List<uint>();
                 indices.Add(0);
+                indices.Add(0);
+                indices.Add(0);
+
                 int skipped = 0;
                 int tris = 0;
                 while(j < model.Meshes[i].FaceCount)

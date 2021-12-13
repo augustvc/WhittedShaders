@@ -116,7 +116,7 @@ int intersect(inout Ray ray) {
 		}
 	}
 
-	int i = 1;
+	int i = 3;
 	while(i <= indexBuffer[0]) {
 		uint triAI = indexBuffer[i++];
 		uint triBI = indexBuffer[i++];

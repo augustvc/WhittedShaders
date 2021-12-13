@@ -60,6 +60,12 @@ namespace P
             Console.WriteLine("update freq: " + this.UpdateFrequency);
 
             MeshLoader.Init();
+            List<uint> indicesForBVH = new List<uint>();
+            for(int i = 3; i < MeshLoader.indices.Count; i++)
+            {
+                indicesForBVH.Add(MeshLoader.indices[i]);
+            }
+            TopLevelBVH topLevelBVH = new TopLevelBVH(MeshLoader.vertices, indicesForBVH);
             GL.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
             VAO = GL.GenVertexArray();
             GL.BindVertexArray(VAO);
