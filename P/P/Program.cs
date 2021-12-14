@@ -19,7 +19,7 @@ namespace P
         bool useGPU = true;
         static void Main(string[] args)
         {
-            using (Game game = new Game(800, 600, "GPU Ray Tracer"))
+            using (Game game = new Game(300, 200, "GPU Ray Tracer"))
             {
                 game.Run(60.0, 0.0);
             }
@@ -43,7 +43,7 @@ namespace P
         private void MouseUpdate()
         {
             Camera.OnMouseMove(this);
-            Thread.Sleep(1);
+            Thread.Sleep(2);
             if (!mouseThreadStop)
             {
                 MouseUpdate();
@@ -65,7 +65,7 @@ namespace P
             {
                 indicesForBVH.Add(MeshLoader.indices[i]);
             }
-            TopLevelBVH topLevelBVH = new TopLevelBVH(MeshLoader.vertices, indicesForBVH);
+            TopLevelBVH topLevelBVH = new TopLevelBVH(MeshLoader.vertices, indicesForBVH.ToArray());
             GL.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
             VAO = GL.GenVertexArray();
             GL.BindVertexArray(VAO);
@@ -82,7 +82,7 @@ namespace P
             shader = new Shader("shader.vert", "shader.frag");
             shader.Use();
 
-            rayTracer = new RayTracer();
+            rayTracer = new RayTracer(topLevelBVH);
             gpuRayTracer = new GPURayTracer();
 
             base.OnLoad(e);

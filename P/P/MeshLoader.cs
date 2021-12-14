@@ -56,29 +56,42 @@ namespace P
             indices.Add(3);
             return;*/
             AssimpContext assimpContext = new AssimpContext();
-            Scene model = assimpContext.ImportFile("../../models/teapot.obj");
+            Scene model = assimpContext.ImportFile("../../models/xyzrgb_dragon.obj");
 
             Console.WriteLine("... : " + model.MeshCount);
             for (int i = 0; i < model.MeshCount; i++)
             {
                 List<Vector3D> vertices = model.Meshes[i].Vertices;
+                if(!model.Meshes[i].HasNormals)
+                {
+                    Console.WriteLine("No normals in this mesh... Setting them all to point up??");
+                }
 
                 MeshLoader.vertices = new float[8 * model.Meshes[i].Vertices.Count];
                 int j = 0;
-                while(j < vertices.Count * 8)
+                while (j < vertices.Count * 8)
                 {
                     Vector3D vertex = model.Meshes[i].Vertices[j / 8];
-                    Vector3D normal = model.Meshes[i].Normals[j / 8];
                     //Vector3D texCoords = model.Meshes[i].TextureCoordinateChannels[0][j / 8];
                     for (int k = 0; k < 3; k++)
                     {
                         MeshLoader.vertices[j++] = vertex[k];
                     }
-                    for(int k = 0; k < 3; k++)
+                    if (model.Meshes[i].HasNormals)
                     {
-                        MeshLoader.vertices[j++] = normal[k];
+                        Vector3D normal = model.Meshes[i].Normals[j / 8];
+                        for (int k = 0; k < 3; k++)
+                        {
+                            MeshLoader.vertices[j++] = normal[k];
+                        }
+                    } else
+                    {
+                        MeshLoader.vertices[j++] = 0f;
+                        MeshLoader.vertices[j++] = 1f;
+                        MeshLoader.vertices[j++] = 0f;
                     }
-                    for(int k = 0; k < 2; k++)
+               
+                    for (int k = 0; k < 2; k++)
                     {
                         j++; //MeshLoader.vertices[j++] = texCoords[k];
                     }
