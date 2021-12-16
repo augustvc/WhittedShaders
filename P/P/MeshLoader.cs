@@ -75,7 +75,7 @@ namespace P
                     //Vector3D texCoords = model.Meshes[i].TextureCoordinateChannels[0][j / 8];
                     for (int k = 0; k < 3; k++)
                     {
-                        MeshLoader.vertices[j++] = vertex[k];
+                        MeshLoader.vertices[j++] = vertex[k]; // * 0.1f;
                     }
                     if (model.Meshes[i].HasNormals)
                     {

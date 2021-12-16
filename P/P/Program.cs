@@ -8,6 +8,7 @@ using OpenTK.Input;
 using OpenTK.Graphics.OpenGL;
 using OpenTK;
 using System.Threading;
+using System.Timers;
 
 namespace P
 {
@@ -16,7 +17,7 @@ namespace P
         double renderCheckTime = 2.0;
         double renderCheckInterval = 5.0;
 
-        bool useGPU = true;
+        bool useGPU = false;
         static void Main(string[] args)
         {
             using (Game game = new Game(300, 200, "GPU Ray Tracer"))
@@ -38,22 +39,18 @@ namespace P
         RayTracer rayTracer;
         GPURayTracer gpuRayTracer;
 
-        bool mouseThreadStop = false;
+        System.Timers.Timer timer = new System.Timers.Timer(4);
 
-        private void MouseUpdate()
+        private void MouseUpdate(Object source, ElapsedEventArgs e)
         {
             Camera.OnMouseMove(this);
-            Thread.Sleep(2);
-            if (!mouseThreadStop)
-            {
-                MouseUpdate();
-            }
         }
 
         protected override void OnLoad(EventArgs e)
         {
-            Thread t = new Thread(MouseUpdate);
-            t.Start();
+            timer.Elapsed += MouseUpdate;
+            timer.AutoReset = true;
+            timer.Enabled = true;
 
             TargetUpdateFrequency = 60.0;
             Console.WriteLine("update period: " + this.UpdatePeriod);
@@ -90,11 +87,11 @@ namespace P
 
         protected override void OnUnload(EventArgs e)
         {
+            timer.Stop();
             GL.BindBuffer(BufferTarget.ArrayBuffer, 0);
             GL.DeleteBuffer(VBO);
             shader.Dispose();
             gpuRayTracer.Dispose();
-            mouseThreadStop = true;
             base.OnUnload(e);
         }
 
@@ -111,8 +108,8 @@ namespace P
             renderCheckTime -= e.Time;
             if (renderCheckTime < 0.0)
             {
-
-                Console.WriteLine("Render time: " + RenderTime);
+                Console.WriteLine("Total primary ray bvh checks: " + RayTracer.totalPrimaryBVHChecks);
+                Console.WriteLine("Avg Render time: " + RayTracer.averageFrameTime);
                 Console.WriteLine("Render fps: " + RenderFrequency);
                 renderCheckTime = renderCheckInterval;
             }

@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using OpenTK;
-
+using System.Diagnostics;
 
 namespace P
 {
@@ -196,6 +196,8 @@ namespace P
             return color;
         }
 
+        public static float averageFrameTime = 0f;
+        public static long totalPrimaryBVHChecks = 0;
         public float[] GenTexture(int width, int height)
         {
             float[] output = new float[width * height * 4];
@@ -264,8 +266,10 @@ namespace P
 
             }
 
-
+            totalPrimaryBVHChecks = 0;
             var aap = 1;
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
             Parallel.For(0, height * aap, (y) =>
             {
                 for (int x = 0; x < width * aap; x++)
@@ -287,6 +291,7 @@ namespace P
                         ray.debuggingRay = true;
                     }
                     Vector4 pixelColor = new Vector4(Sample(ray, recursionDepth, false), 1.0f);
+                    totalPrimaryBVHChecks += ray.bvhChecks;
                     if ((y == height / 2) && (x == width / 2))
                     {
                         pixelColor = new Vector4(0.0f, 0.0f, 1.0f, 1.0f);
@@ -301,6 +306,12 @@ namespace P
                     }
                 }
             });
+            sw.Stop();
+            if(averageFrameTime == 0f)
+            {
+                averageFrameTime = sw.ElapsedMilliseconds;
+            }
+            averageFrameTime = averageFrameTime * 0.98f + (float)sw.ElapsedMilliseconds * 0.02f;
 
             return output;
         }
