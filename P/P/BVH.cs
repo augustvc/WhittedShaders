@@ -13,7 +13,7 @@ namespace P
     class TopLevelBVH
     {
         public float[] vertices;
-        public FourWayBVH TopBVH;
+        public BVH TopBVH;
 
         const int primsPerJob = 256;
         int desiredThreads = 24;
@@ -29,7 +29,7 @@ namespace P
             sw.Start();
 
             this.vertices = vertices;
-            TopBVH = new FourWayBVH(vertices, indices);
+            TopBVH = new BVH(vertices, indices);
             RecursiveSplit( TopBVH);
 
             threads = new Thread[desiredThreads];
@@ -64,7 +64,7 @@ namespace P
             Console.WriteLine("BVH building duration in ms: " + sw.ElapsedMilliseconds);
         }
 
-        void RecursiveSplit(FourWayBVH bvh)
+        void RecursiveSplit(BVH bvh)
         {
             int binCount = 8;
 
@@ -126,20 +126,20 @@ namespace P
             Vector3 rightMostMins = binMins[binCount - 3];
             Vector3 rightMostMaxes = binMaxes[binCount - 3];
 
-            float SAHLeft = FourWayBVH.CalculateHalfSA(leftMins, leftMaxes) * (bins[0] + constantCost);
-            float SAHRight = FourWayBVH.CalculateHalfSA(rightMins, rightMaxes) * (bins[binCount - 1] + constantCost);
-            float SAHLeftMost = FourWayBVH.CalculateHalfSA(leftMostMins,leftMostMaxes)*(bins[binCount-2]+constantCost);
-            float SAHRightMost = FourWayBVH.CalculateHalfSA(rightMostMins, rightMostMaxes) * (bins[binCount - 3] + constantCost);
+            float SAHLeftMost = BVH.CalculateHalfSA(leftMins, leftMaxes) * (bins[0] + constantCost);
+            float SAHLeft = BVH.CalculateHalfSA(rightMins, rightMaxes) * (bins[binCount - 1] + constantCost);
+            float SAHRight = BVH.CalculateHalfSA(leftMostMins,leftMostMaxes)*(bins[binCount-2]+constantCost);
+            float SAHRightMost = BVH.CalculateHalfSA(rightMostMins, rightMostMaxes) * (bins[binCount - 3] + constantCost);
             int leftPrims = bins[0];
             int rightPrims = bins[binCount - 1];
+
             int leftMostPrims = bins[binCount - 2];
             int rightMostPrims = bins[binCount - 3];
             //==========================================================================================================Check the bin count values
             bool[] binIsLeft = new bool[binCount];
             binIsLeft[0] = true;
             binIsLeft[binCount - 1] = false;
-            binIsLeft[binCount - 2] = false;
-            binIsLeft[binCount - 3] = false;
+
 
             bool highBin = false;
             for(int i = 2; i < binCount; i++)
@@ -149,12 +149,15 @@ namespace P
                 {
                     j = (binCount-1) - j;
                 }
-                float changedSALeft = FourWayBVH.CalculateHalfSA(Vector3.ComponentMin(leftMins, binMins[j]), Vector3.ComponentMax(leftMaxes, binMaxes[j]));
-                float changedSARight = FourWayBVH.CalculateHalfSA(Vector3.ComponentMin(rightMins, binMins[j]), Vector3.ComponentMax(rightMaxes, binMaxes[j]));
-                float changedSALeftMost = FourWayBVH.CalculateHalfSA(Vector3.ComponentMin(leftMostMins, binMins[j]), Vector3.ComponentMax(leftMostMaxes, binMaxes[j]));
-                float changedSARightMost = FourWayBVH.CalculateHalfSA(Vector3.ComponentMin(rightMostMins, binMins[j]), Vector3.ComponentMax(rightMostMaxes, binMaxes[j]));
+                float changedSALeft = BVH.CalculateHalfSA(Vector3.ComponentMin(leftMins, binMins[j]), Vector3.ComponentMax(leftMaxes, binMaxes[j]));
+                float changedSARight = BVH.CalculateHalfSA(Vector3.ComponentMin(rightMins, binMins[j]), Vector3.ComponentMax(rightMaxes, binMaxes[j]));
+
+                float changedSALeftMost = BVH.CalculateHalfSA(Vector3.ComponentMin(leftMostMins, binMins[j]), Vector3.ComponentMax(leftMostMaxes, binMaxes[j]));
+                float changedSARightMost = BVH.CalculateHalfSA(Vector3.ComponentMin(rightMostMins, binMins[j]), Vector3.ComponentMax(rightMostMaxes, binMaxes[j]));
+                
                 float changedSAHLeft = changedSALeft * (leftPrims + bins[j] + constantCost);
                 float changedSAHRight = changedSARight * (rightPrims + bins[j] + constantCost);
+
                 float changedSAHLeftMost = changedSALeftMost * (leftMostPrims + bins[j] + constantCost);
                 float changedSAHRightMost = changedSARightMost * (rightMostPrims + bins[j] + constantCost);
 
@@ -232,21 +235,23 @@ namespace P
 
                 if (binIsLeft[binNr])
                 {
-                    leftIndices[leftIterator++] = bvh.triangleIndices[i];
-                    leftIndices[leftIterator++] = bvh.triangleIndices[i + 1];
-                    leftIndices[leftIterator++] = bvh.triangleIndices[i + 2];
-                }
-                else if(binIsLeft[binNr - 1])
-                {
-                    rightIndices[rightIterator++] = bvh.triangleIndices[i ];
-                    rightIndices[rightIterator++] = bvh.triangleIndices[i + 1];
-                    rightIndices[rightIterator++] = bvh.triangleIndices[i + 2];
-                }
-                else if(binIsLeft[binNr - 2])
-                {
                     leftMostIndices[leftMostIterator++] = bvh.triangleIndices[i];
                     leftMostIndices[leftMostIterator++] = bvh.triangleIndices[i + 1];
                     leftMostIndices[leftMostIterator++] = bvh.triangleIndices[i + 2];
+                    
+                }
+                else if(binIsLeft[binNr - 1])
+                {
+                    leftIndices[leftIterator++] = bvh.triangleIndices[i];
+                    leftIndices[leftIterator++] = bvh.triangleIndices[i + 1];
+                    leftIndices[leftIterator++] = bvh.triangleIndices[i + 2];
+                    
+                }
+                else if(binIsLeft[binNr - 2])
+                {
+                    rightIndices[rightIterator++] = bvh.triangleIndices[i];
+                    rightIndices[rightIterator++] = bvh.triangleIndices[i + 1];
+                    rightIndices[rightIterator++] = bvh.triangleIndices[i + 2];
                 }
                 else
                 {
@@ -256,15 +261,15 @@ namespace P
                 }
             }
 
-            FourWayBVH leftBVH = new FourWayBVH(leftIndices, leftMins, leftMaxes, SAHLeft);
-            FourWayBVH rightBVH = new FourWayBVH(rightIndices, rightMins, rightMaxes, SAHRight);
-            FourWayBVH leftMostBVH = new FourWayBVH(leftMostIndices, leftMostMins, leftMostMaxes, SAHLeftMost);
-            FourWayBVH rightMostBVH = new FourWayBVH(rightMostIndices, rightMostMins, rightMostMaxes, SAHRightMost);
+            BVH leftBVH = new BVH(leftIndices, leftMins, leftMaxes, SAHLeft);
+            BVH rightBVH = new BVH(rightIndices, rightMins, rightMaxes, SAHRight);
+            BVH leftMostBVH = new BVH(leftMostIndices, leftMostMins, leftMostMaxes, SAHLeftMost);
+            BVH rightMostBVH = new BVH(rightMostIndices, rightMostMins, rightMostMaxes, SAHRightMost);
 
             bvh.leftChild = leftBVH;
             bvh.rightChild = rightBVH;
-            bvh.rightMostChild = rightMostBVH;
-            bvh.leftMostChild = leftMostBVH;
+            //bvh.rightMostChild = rightMostBVH;
+            //bvh.leftMostChild = leftMostBVH;
             bvh.isLeaf = false;
             
             if(leftMostPrims< primsPerJob)
@@ -318,54 +323,70 @@ namespace P
 
 
 }
+
 class FourWayBVH
+{
+    
+}
+
+
+
+
+class BVH
 {
     public const int interval = 3000;
     public Vector3 AABBMin;
     public Vector3 AABBMax;
     public bool isLeaf = true;
-    public FourWayBVH leftMostChild;
-    public FourWayBVH leftChild;
-    public FourWayBVH rightChild;
-    public FourWayBVH rightMostChild;
+    public BVH leftChild;
+    public BVH rightChild;
 
     public float SAH;
     public uint[] triangleIndices;
 
-    public FourWayBVH(float[] vertices, uint[] indices)
+    public BVH(float[] vertices, uint[] indices)
     {
         MakeAABB(vertices, indices, out AABBMin, out AABBMax);
         SAH = CalculateHalfSA(AABBMin, AABBMax) * (indices.Length * 0.3333f); // Static cost of intersecting AABB: add 5 to indices
         triangleIndices = indices;
     }
-    public FourWayBVH(uint[] indices, Vector3 AABBMin, Vector3 AABBMax, float SAH)
+
+    public BVH(uint[] indices, Vector3 AABBMin, Vector3 AABBMax, float SAH)
     {
         this.AABBMin = AABBMin;
         this.AABBMax = AABBMax;
         this.SAH = SAH;
         triangleIndices = indices;
     }
-    public void MakeAABB(float[] vertices, uint[] indices, out Vector3 AABBmin, out Vector3 AABBmax)
+
+    public static float CalculateHalfSA(Vector3 AABBMin, Vector3 AABBMax)
     {
-        Vector3 AABBMinFinal = new Vector3(float.MinValue);
-        Vector3 AABBMaxFinal = new Vector3(float.MaxValue);
+        Vector3 diff = AABBMax - AABBMin;
+        return diff[0] * diff[1] + diff[0] * diff[2] + diff[1] * diff[2];
+    }
+
+    public void MakeAABB(float[] vertices, uint[] indices, out Vector3 AABBMin, out Vector3 AABBMax)
+    {
+        Vector3 AABBMinFinal = new Vector3(float.MaxValue);
+        Vector3 AABBMaxFinal = new Vector3(float.MinValue);
 
         int minLock = 0;
         int maxLock = 0;
 
+
         void updateAABBs(int i)
         {
-            Vector3 AABBMinTemp = new Vector3(float.MinValue);
-            Vector3 AABBMaxTemp = new Vector3(float.MaxValue);
+            Vector3 AABBMinTemp = new Vector3(float.MaxValue);
+            Vector3 AABBMaxTemp = new Vector3(float.MinValue);
 
             int baseStart = i * interval;
             for (int j = baseStart; (j < baseStart + interval) && j < indices.Length; j++)
             {
                 for (var a = 0; a < 3; a++)
                 {
-                    if (vertices[indices[j] * 8 + a] < AABBMaxTemp[a])
+                    if (vertices[indices[j] * 8 + a] < AABBMinTemp[a])
                     {
-                        AABBMaxTemp[a] = vertices[indices[j] * 8 + a];
+                        AABBMinTemp[a] = vertices[indices[j] * 8 + a];
                     }
                     if (vertices[indices[j] * 8 + a] > AABBMaxTemp[a])
                     {
@@ -373,15 +394,20 @@ class FourWayBVH
                     }
                 }
             }
-            while (Interlocked.Exchange(ref minLock, 1) == 1)
-            { }
-            AABBMinFinal = Vector3.ComponentMin(AABBMinTemp, AABBMinFinal);
-            minLock = 0;
-            while (Interlocked.Exchange(ref maxLock, 1) == 1)
-            { }
-            AABBMaxFinal = Vector3.ComponentMax(AABBMaxTemp, AABBMaxFinal);
 
+            while (Interlocked.Exchange(ref minLock, 1) == 1)
+            {
+            }
+            AABBMinFinal = Vector3.ComponentMin(AABBMinFinal, AABBMinTemp);
+            minLock = 0;
+
+            while (Interlocked.Exchange(ref maxLock, 1) == 1)
+            {
+            }
+            AABBMaxFinal = Vector3.ComponentMax(AABBMaxFinal, AABBMaxTemp);
+            maxLock = 0;
         }
+
         if (TopLevelBVH.jobs.Count == 0 && indices.Length >= interval * 8)
         {
             Parallel.For(0, (indices.Length / interval) + 1, (i) => updateAABBs(i));
@@ -403,21 +429,18 @@ class FourWayBVH
                 }
             }
         }
-        AABBmin = AABBMinFinal;
-        AABBmax = AABBMaxFinal;
-    }
-    public static float CalculateHalfSA(Vector3 AABBMin, Vector3 AABBMax)
-    {
-        Vector3 diff = AABBMax - AABBMin;
-        return diff[0] * diff[1] + diff[1] * diff[2] + diff[0] * diff[2];
+
+        AABBMin = AABBMinFinal;
+        AABBMax = AABBMaxFinal;
     }
 
     public void nearestIntersection(Ray ray, float[] vertices)
     {
         ray.bvhChecks++;
+
         if (isLeaf)
         {
-            for (int i = 0; i <= triangleIndices.Length; i++)
+            for (int i = 0; i < triangleIndices.Length; i += 3)
             {
                 Vector3 a = new Vector3(vertices[triangleIndices[i] * 8], vertices[triangleIndices[i] * 8 + 1], vertices[triangleIndices[i] * 8 + 2]);
                 Vector3 b = new Vector3(vertices[triangleIndices[i + 1] * 8], vertices[triangleIndices[i + 1] * 8 + 1], vertices[triangleIndices[i + 1] * 8 + 2]);
@@ -425,26 +448,31 @@ class FourWayBVH
 
                 Vector3 ab = b - a;
                 Vector3 ac = c - a;
-                Vector3 diff = ray.Origin - a;
                 Vector3 cross1 = Vector3.Cross(ray.Direction, ac);
-                Vector3 cross2 = Vector3.Cross(diff, ab);
                 float det = Vector3.Dot(ab, cross1);
-                float detInv = 1.0f / det;
-                if (Math.Abs(det) <= 0.001)
+                if (Math.Abs(det) < 0.0001)
                     continue;
-                float u = Vector3.Dot(diff, cross1) * detInv;
 
-                float v = Vector3.Dot(ray.Direction, cross2) * detInv;
+                float detInv = 1.0f / det;
+                Vector3 diff = ray.Origin - a;
+                float u = Vector3.Dot(diff, cross1) * detInv;
                 if (u < 0 || u > 1)
+                {
                     continue;
+                }
+
+                Vector3 cross2 = Vector3.Cross(diff, ab);
+                float v = Vector3.Dot(ray.Direction, cross2) * detInv;
                 if (v < 0 || v > 1)
                     continue;
+
                 if (u + v > 1)
                     continue;
                 float t = Vector3.Dot(ac, cross2) * detInv;
                 if (t <= 0)
                     continue;
-                if (t <= ray.t)
+
+                if (t < ray.t)
                 {
                     ray.t = t;
                     ray.triangleHit = new Vector3[] { a, b, c };
@@ -454,23 +482,9 @@ class FourWayBVH
         }
         else
         {
-            float leftMostD = leftMostChild.rayAABB(ray);
             float leftD = leftChild.rayAABB(ray);
             float rightD = rightChild.rayAABB(ray);
-            float rightMostD = rightMostChild.rayAABB(ray);
-            if (leftMostD < leftD)
-            {
-                Console.WriteLine("never");
-                if (leftMostD < ray.t && leftMostD >= 0f)
-                {
-                    leftMostChild.nearestIntersection(ray, vertices);
-                }
-                if (leftD < ray.t && leftD >= 0f)
-                {
-                    leftChild.nearestIntersection(ray, vertices);
-                }
-            }
-            else if (leftD < rightD)
+            if (leftD < rightD)
             {
                 if (leftD < ray.t && leftD >= 0f)
                 {
@@ -481,30 +495,20 @@ class FourWayBVH
                     rightChild.nearestIntersection(ray, vertices);
                 }
             }
-            else if (rightD < rightMostD)
+            else
             {
-                if (rightD < ray.t && rightMostD >= 0f)
+                if (rightD < ray.t && rightD >= 0f)
                 {
                     rightChild.nearestIntersection(ray, vertices);
                 }
-                if (rightMostD < ray.t && rightMostD >= 0f)
+                if (leftD < ray.t && leftD >= 0f)
                 {
-                    rightMostChild.nearestIntersection(ray, vertices);
-                }
-            }
-            else
-            {
-                if(rightMostD<ray.t && leftMostD >= 0f)
-                {
-                    rightMostChild.nearestIntersection(ray, vertices);
-                }
-                if(leftMostD<ray.t && leftMostD >= 0f)
-                {
-                    leftMostChild.nearestIntersection(ray, vertices);
+                    leftChild.nearestIntersection(ray, vertices);
                 }
             }
         }
     }
+
     public float rayAABB(Ray ray)
     {
         // Ray-AABB intersection code taken from https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-box-intersection
@@ -561,238 +565,4 @@ class FourWayBVH
 }
 
 
-
-
-
-
-class BVH
-    {
-        public const int interval = 3000;
-        public Vector3 AABBMin;
-        public Vector3 AABBMax;
-        public bool isLeaf = true;
-        public BVH leftChild;
-        public BVH rightChild;
-
-        public float SAH;
-        public uint[] triangleIndices;
-
-        public BVH(float[] vertices, uint[] indices)
-        {
-            MakeAABB(vertices, indices, out AABBMin, out AABBMax);
-            SAH = CalculateHalfSA(AABBMin, AABBMax) * (indices.Length * 0.3333f); // Static cost of intersecting AABB: add 5 to indices
-            triangleIndices = indices;
-        }
-        
-        public BVH(uint[] indices, Vector3 AABBMin, Vector3 AABBMax, float SAH)
-        {
-            this.AABBMin = AABBMin;
-            this.AABBMax = AABBMax;
-            this.SAH = SAH;
-            triangleIndices = indices;
-        }
-
-        public static float CalculateHalfSA(Vector3 AABBMin, Vector3 AABBMax)
-        {
-            Vector3 diff = AABBMax - AABBMin;
-            return diff[0] * diff[1] + diff[0] * diff[2] + diff[1] * diff[2];
-        }
-
-        public void MakeAABB(float[] vertices, uint[] indices, out Vector3 AABBMin, out Vector3 AABBMax)
-        {
-            Vector3 AABBMinFinal = new Vector3(float.MaxValue);
-            Vector3 AABBMaxFinal = new Vector3(float.MinValue);
-
-            int minLock = 0;
-            int maxLock = 0;
-
-
-            void updateAABBs(int i)
-            {
-                Vector3 AABBMinTemp = new Vector3(float.MaxValue);
-                Vector3 AABBMaxTemp = new Vector3(float.MinValue);
-
-                int baseStart = i * interval;
-                for (int j = baseStart; (j < baseStart + interval) && j < indices.Length; j++)
-                {
-                    for (var a = 0; a < 3; a++)
-                    {
-                        if (vertices[indices[j] * 8 + a] < AABBMinTemp[a])
-                        {
-                            AABBMinTemp[a] = vertices[indices[j] * 8 + a];
-                        }
-                        if (vertices[indices[j] * 8 + a] > AABBMaxTemp[a])
-                        {
-                            AABBMaxTemp[a] = vertices[indices[j] * 8 + a];
-                        }
-                    }
-                }
-
-                while(Interlocked.Exchange(ref minLock, 1) == 1)
-                {
-                }
-                AABBMinFinal = Vector3.ComponentMin(AABBMinFinal, AABBMinTemp);
-                minLock = 0;
-
-                while(Interlocked.Exchange(ref maxLock, 1) == 1)
-                {
-                }
-                AABBMaxFinal = Vector3.ComponentMax(AABBMaxFinal, AABBMaxTemp);
-                maxLock = 0;
-            }
-
-            if(TopLevelBVH.jobs.Count == 0 && indices.Length >= interval * 8)
-            {
-                Parallel.For(0, (indices.Length / interval) + 1, (i) => updateAABBs(i));
-            } else
-            {
-                for (int i = 0; i < indices.Length; i++)
-                {
-                    for (var a = 0; a < 3; a++)
-                    {
-                        if (vertices[indices[i] * 8 + a] < AABBMinFinal[a])
-                        {
-                            AABBMinFinal[a] = vertices[indices[i] * 8 + a];
-                        }
-                        if (vertices[indices[i] * 8 + a] > AABBMaxFinal[a])
-                        {
-                            AABBMaxFinal[a] = vertices[indices[i] * 8 + a];
-                        }
-                    }
-                }
-            }
-
-            AABBMin = AABBMinFinal;
-            AABBMax = AABBMaxFinal;
-        }
-
-        public void nearestIntersection(Ray ray, float[] vertices)
-        {
-            ray.bvhChecks++;
-
-            if(isLeaf)
-            {
-                for(int i = 0; i < triangleIndices.Length; i+=3)
-                {
-                    Vector3 a = new Vector3(vertices[triangleIndices[i] * 8], vertices[triangleIndices[i] * 8 + 1], vertices[triangleIndices[i] * 8 + 2]);
-                    Vector3 b = new Vector3(vertices[triangleIndices[i + 1] * 8], vertices[triangleIndices[i + 1] * 8 + 1], vertices[triangleIndices[i + 1] * 8 + 2]);
-                    Vector3 c = new Vector3(vertices[triangleIndices[i + 2] * 8], vertices[triangleIndices[i + 2] * 8 + 1], vertices[triangleIndices[i + 2] * 8 + 2]);
-
-                    Vector3 ab = b - a;
-                    Vector3 ac = c - a;
-                    Vector3 cross1 = Vector3.Cross(ray.Direction, ac);
-                    float det = Vector3.Dot(ab, cross1);
-                    if (Math.Abs(det) < 0.0001)
-                        continue;
-
-                    float detInv = 1.0f / det;
-                    Vector3 diff = ray.Origin - a;
-                    float u = Vector3.Dot(diff, cross1) * detInv;
-                    if (u < 0 || u > 1)
-                    {
-                        continue;
-                    }
-
-                    Vector3 cross2 = Vector3.Cross(diff, ab);
-                    float v = Vector3.Dot(ray.Direction, cross2) * detInv;
-                    if (v < 0 || v > 1)
-                        continue;
-
-                    if (u + v > 1)
-                        continue;
-                    float t = Vector3.Dot(ac, cross2) * detInv;
-                    if (t <= 0)
-                        continue;
-
-                    if (t < ray.t)
-                    {
-                        ray.t = t;
-                        ray.triangleHit = new Vector3[] { a, b, c };
-                        ray.objectHit = -1;
-                    }
-                }
-            } else
-            {
-                float leftD = leftChild.rayAABB(ray);
-                float rightD = rightChild.rayAABB(ray);
-                if (leftD < rightD)
-                {
-                    if (leftD < ray.t && leftD >= 0f)
-                    {
-                        leftChild.nearestIntersection(ray, vertices);
-                    }
-                    if (rightD < ray.t && rightD >= 0f)
-                    {
-                        rightChild.nearestIntersection(ray, vertices);
-                    }
-                } else
-                {
-                    if (rightD < ray.t && rightD >= 0f)
-                    {
-                        rightChild.nearestIntersection(ray, vertices);
-                    }
-                    if (leftD < ray.t && leftD >= 0f)
-                    {
-                        leftChild.nearestIntersection(ray, vertices);
-                    }
-                }
-            }
-        }
-
-        public float rayAABB(Ray ray)
-        {
-            // Ray-AABB intersection code taken from https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-box-intersection
-            Vector3 inverseD = new Vector3(float.MaxValue);
-            int[] signD = new int[3];
-            for (int a = 0; a < 3; a++)
-            {
-                if (ray.Direction[a] > 0.000001f)
-                {
-                    inverseD[a] = 1f / ray.Direction[a];
-                }
-                else if (ray.Direction[a] < -0.000001f)
-                {
-                    inverseD[a] = 1f / ray.Direction[a];
-                }
-
-                signD[a] = 0;
-                if (inverseD[a] > 0f)
-                {
-                    signD[a] = 1;
-                }
-            }
-
-            Vector3[] bounds = new Vector3[] { AABBMax, AABBMin };
-
-            float tmin = (bounds[signD[0]].X - ray.Origin.X) * inverseD.X;
-            float tmax = (bounds[1 - signD[0]].X - ray.Origin.X) * inverseD.X;
-            float tymin = (bounds[signD[1]].Y - ray.Origin.Y) * inverseD.Y;
-            float tymax = (bounds[1 - signD[1]].Y - ray.Origin.Y) * inverseD.Y;
-
-            if ((tmin > tymax) || (tymin > tmax))
-                return float.MaxValue;
-            if (tymin > tmin)
-                tmin = tymin;
-            if (tymax < tmax)
-                tmax = tymax;
-
-            float tzmin = (bounds[signD[2]].Z - ray.Origin.Z) * inverseD.Z;
-            float tzmax = (bounds[1 - signD[2]].Z - ray.Origin.Z) * inverseD.Z;
-
-            if ((tmin > tzmax) || (tzmin > tmax))
-                return float.MaxValue;
-            if (tzmin > tmin)
-                tmin = tzmin;
-            if (tzmax < tmax)
-                tmax = tzmax;
-
-            if(tmin < 0f && tmax >= 0f)
-            {
-                return 0f;
-            }
-            return tmin;
-        }
-    }
-
-    
 
