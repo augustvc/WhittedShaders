@@ -15,10 +15,12 @@ namespace P
         List<Light> LightSources;
         TopLevelBVH topLevelBVH;
         Material testMaterial = new Material(new Vector3(0.9f), 1f, 0f, false);
+        FourWayBVH topFourWayBVH;
 
-        public RayTracer(TopLevelBVH topLevelBVH)
+        public RayTracer(TopLevelBVH topLevelBVH,FourWayBVH topFourWayBVH)
         {
             this.topLevelBVH = topLevelBVH;
+            this.topFourWayBVH = topFourWayBVH;
             Scene = new List<Primitive>();
             Scene.Add(new Sphere(new Vector3(0, 0, 4), 2, new Material(new Vector3(0, 0, 0), 0.0f, 0.0f, true, false, 2.1f)));
             Scene.Add(new Sphere(new Vector3(4, 0, 8), 2, new Material(new Vector3(1, 1, 1), 0.0f, 1.0f, false)));
@@ -37,7 +39,8 @@ namespace P
                 return new Vector3(0f);
             }
 
-            topLevelBVH.TopBVH.nearestIntersection(ray, topLevelBVH.vertices);
+            //topLevelBVH.TopBVH.nearestIntersection(ray, topLevelBVH.vertices);
+            topFourWayBVH.nearestIntersection(ray, topLevelBVH.vertices);
             if (ray.debuggingRay)
             {
                 //Console.WriteLine("Ray iters: " + ray.bvhChecks);

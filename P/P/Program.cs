@@ -63,6 +63,7 @@ namespace P
                 indicesForBVH.Add(MeshLoader.indices[i]);
             }
             TopLevelBVH topLevelBVH = new TopLevelBVH(MeshLoader.vertices, indicesForBVH.ToArray());
+            FourWayBVH topFourWayBVH = new FourWayBVH(topLevelBVH.TopBVH);
             GL.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
             VAO = GL.GenVertexArray();
             GL.BindVertexArray(VAO);
@@ -79,7 +80,7 @@ namespace P
             shader = new Shader("shader.vert", "shader.frag");
             shader.Use();
 
-            rayTracer = new RayTracer(topLevelBVH);
+            rayTracer = new RayTracer(topLevelBVH,topFourWayBVH);
             gpuRayTracer = new GPURayTracer();
 
             base.OnLoad(e);
