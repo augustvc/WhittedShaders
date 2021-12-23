@@ -131,7 +131,7 @@ namespace P
             int leftPrims = bins[0];
             int rightPrims = bins[binCount - 1];
 
-            //==========================================================================================================Check the bin count values
+            
             bool[] binIsLeft = new bool[binCount];
             binIsLeft[0] = true;
             binIsLeft[binCount - 1] = false;
@@ -271,13 +271,17 @@ class FourWayBVH
     public Vector3 AABBMin;
     public Vector3 AABBMax;
     public bool isLeaf = true;
+
+    public FourWayBVH[] fourwayChildren;
     public FourWayBVH leftleft;
     public FourWayBVH leftright;
     public FourWayBVH rightleft;
     public FourWayBVH rightright;
+    public bool isLeafParent = false;
 
     public float SAH =0f;
     public uint[] triangleIndices;
+    
 
     public FourWayBVH()
     {
@@ -289,6 +293,9 @@ class FourWayBVH
 
     public FourWayBVH(BVH oldVersion)
     {
+        this.AABBMax = oldVersion.AABBMax;
+        this.AABBMin = oldVersion.AABBMin;
+        this.SAH = oldVersion.SAH;
         
         if (oldVersion.isLeaf)
         {
@@ -300,6 +307,7 @@ class FourWayBVH
         this.isLeaf = false;
         if (!oldVersion.leftChild.isLeaf)
         {
+            
             //leftleft
             leftleft = new FourWayBVH(oldVersion.leftChild.leftChild);
             leftleft.SAH = oldVersion.leftChild.leftChild.SAH;
@@ -317,12 +325,14 @@ class FourWayBVH
         }
         else
         {
+            
             leftleft = new FourWayBVH(oldVersion.leftChild);
             leftright = new FourWayBVH();
         }
 
         if (!oldVersion.rightChild.isLeaf)
         {
+            
             //rightleft
             rightleft = new FourWayBVH(oldVersion.rightChild.leftChild);
             rightleft.SAH = oldVersion.rightChild.leftChild.SAH;
@@ -340,10 +350,13 @@ class FourWayBVH
         }
         else
         {
+            
             rightleft = new FourWayBVH(oldVersion.rightChild);
             rightright = new FourWayBVH();
         }
         //Console.WriteLine("fourway created");
+        
+        fourwayChildren = new FourWayBVH[] { leftleft, leftright, rightleft, rightright };
     }
 
     public void nearestIntersection(Ray ray, float[] vertices)
@@ -354,6 +367,7 @@ class FourWayBVH
             //if (ray.debuggingRay) Console.WriteLine("Leaf");
             for (int i = 0; i < triangleIndices.Length; i += 3)
             {
+                
                 Vector3 a = new Vector3(vertices[triangleIndices[i] * 8], vertices[triangleIndices[i] * 8 + 1], vertices[triangleIndices[i] * 8 + 2]);
                 Vector3 b = new Vector3(vertices[triangleIndices[i + 1] * 8], vertices[triangleIndices[i + 1] * 8 + 1], vertices[triangleIndices[i + 1] * 8 + 2]);
                 Vector3 c = new Vector3(vertices[triangleIndices[i + 2] * 8], vertices[triangleIndices[i + 2] * 8 + 1], vertices[triangleIndices[i + 2] * 8 + 2]);
@@ -396,80 +410,107 @@ class FourWayBVH
         else
         {
             float firstD = leftleft.rayAABB(ray);
-            FourWayBVH first = leftleft;
+            int first = 0;
             float secondD = leftright.rayAABB(ray);
-            FourWayBVH second = leftright;
+            int second = 1;
             float thirdD = rightleft.rayAABB(ray);
-            FourWayBVH third = rightleft;
+            int third = 2;
             float fourthD = rightright.rayAABB(ray);
-            FourWayBVH fourth = rightright;
+            int fourth = 3;
             float temp = 0f;
-            FourWayBVH tempBVH;
+            int tempBVH;
+            if (!this.isLeafParent) {
+                if (firstD > secondD)
+                {
+                    temp = firstD;
+                    firstD = secondD;
+                    secondD = temp;
+                    tempBVH = first;
+                    first = second;
+                    second = tempBVH;
 
-            if (firstD > secondD)
-            {
-                temp = firstD;
-                firstD = secondD;
-                secondD = temp;
-                tempBVH = first;
-                first = second;
-                second = tempBVH;
-
+                }
+                if (firstD > thirdD)
+                {
+                    temp = firstD;
+                    firstD = thirdD;
+                    thirdD = firstD;
+                    tempBVH = first;
+                    first = third;
+                    third = tempBVH;
+                }
+                if (firstD > fourthD)
+                {
+                    temp = firstD;
+                    firstD = fourthD;
+                    fourthD = temp;
+                    tempBVH = first;
+                    first = fourth;
+                    fourth = tempBVH;
+                }
+                if (secondD > thirdD)
+                {
+                    temp = secondD;
+                    secondD = thirdD;
+                    thirdD = temp;
+                    tempBVH = second;
+                    second = third;
+                    third = tempBVH;
+                }
+                if (secondD > fourthD)
+                {
+                    temp = secondD;
+                    secondD = fourthD;
+                    fourthD = temp;
+                    tempBVH = second;
+                    second = fourth;
+                    fourth = tempBVH;
+                }
+                if (thirdD > fourthD)
+                {
+                    temp = thirdD;
+                    thirdD = fourthD;
+                    fourthD = temp;
+                    tempBVH = third;
+                    third = fourth;
+                    fourth = tempBVH;
+                }
+                if (firstD >= ray.t)
+                    return;
+                if (firstD >= 0f)
+                    fourwayChildren[first].nearestIntersection(ray, vertices);
+                if (secondD >= ray.t)
+                    return;
+                if (secondD >= 0f)
+                    fourwayChildren[second].nearestIntersection(ray, vertices);
+                if (thirdD >= ray.t)
+                    return;
+                if (thirdD >= 0)
+                    fourwayChildren[third].nearestIntersection(ray, vertices);
+                if (fourthD >= ray.t)
+                    return;
+                if (fourthD >= 0f)
+                    fourwayChildren[fourth].nearestIntersection(ray, vertices);
             }
-            if (firstD > thirdD)
+            else
             {
-                temp = firstD;
-                firstD = thirdD;
-                thirdD = firstD;
-                tempBVH = first;
-                first = third;
-                third = tempBVH;
+                
+                if (firstD >= 0f&& firstD<ray.t)
+                    fourwayChildren[first].nearestIntersection(ray, vertices);
+                
+                if (secondD >= 0f && secondD <ray.t)
+                    fourwayChildren[second].nearestIntersection(ray, vertices);
+                
+                if (thirdD >= 0 && thirdD  <ray.t)
+                    fourwayChildren[third].nearestIntersection(ray, vertices);
+                
+                if (fourthD >= 0f && fourthD < ray.t )
+                    fourwayChildren[fourth].nearestIntersection(ray, vertices);
             }
-            if (firstD > fourthD)
-            {
-                temp = firstD;
-                firstD = fourthD;
-                fourthD = temp;
-                tempBVH = first;
-                first = fourth;
-                fourth = tempBVH;
-            }
-            if (secondD > thirdD)
-            {
-                temp = secondD;
-                secondD = thirdD;
-                thirdD = temp;
-                tempBVH = second;
-                second = third;
-                third = tempBVH;
-            }
-            if (secondD > fourthD)
-            {
-                temp = secondD;
-                secondD = fourthD;
-                fourthD = temp;
-                tempBVH = second;
-                second = fourth;
-                fourth = tempBVH;
-            }
-            if (thirdD > fourthD)
-            {
-                temp = thirdD;
-                thirdD = fourthD;
-                fourthD = temp;
-                tempBVH = third;
-                third = fourth;
-                fourth = tempBVH;
-            }
+            
+            
             //if (ray.debuggingRay) Console.WriteLine("Hhhhhhhhhhhhhhhhhh");
-            if (firstD >= ray.t) return;
-            if(firstD >= 0f)first.nearestIntersection(ray, vertices);
-            if (secondD >= ray.t)return;
-            if(secondD >=0f)second.nearestIntersection(ray, vertices);
-            if (thirdD >= ray.t)return;
-            if(thirdD>=0)third.nearestIntersection(ray, vertices);
-            if (fourthD >= ray.t)return;
-            if(fourthD>=0f)fourth.nearestIntersection(ray, vertices);
+            
 
         }
     }
