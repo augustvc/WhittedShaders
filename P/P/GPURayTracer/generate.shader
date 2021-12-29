@@ -9,6 +9,7 @@ struct Ray
 	uint pixelX;
 	uint pixelY;
 	vec3 ambient;
+	int primID;
 };
 
 layout(std430, binding = 1) buffer rayInBuffer
@@ -35,5 +36,6 @@ void main() {
 		1000000.0,
 		gl_GlobalInvocationID.x,
 		gl_GlobalInvocationID.y,
-		vec3(0.0));
+		vec3(0.0),
+		-1);
 }

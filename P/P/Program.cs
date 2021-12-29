@@ -17,10 +17,15 @@ namespace P
         double renderCheckTime = 2.0;
         double renderCheckInterval = 5.0;
 
-        bool useGPU = false;
+        static bool useGPU = true;
         static void Main(string[] args)
         {
-            using (Game game = new Game(300, 200, "GPU Ray Tracer"))
+            string title = "CPU Ray Tracer";
+            if (useGPU)
+            {
+                title = "GPU Ray Tracer";
+            }
+            using (Game game = new Game(300, 200, title))
             {
                 game.Run(60.0, 0.0);
             }
@@ -137,6 +142,7 @@ namespace P
 
             rayTracer = new RayTracer(topLevelBVH,topFourWayBVH);
             gpuRayTracer = new GPURayTracer();
+            gpuRayTracer.SetupTriangleBuffers(MeshLoader.vertices, MeshLoader.indices, topLevelBVH);
 
             base.OnLoad(e);
         }

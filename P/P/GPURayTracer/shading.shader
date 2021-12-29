@@ -19,9 +19,9 @@ void main() {
 		ray = shadowRays[gl_GlobalInvocationID.x + (iter * 262144)];
 
 		iter++;
-		int primID = intersect(ray);
+		intersect(ray);
 		vec4 pixel = vec4(ray.energy, 1.0);
-		if (primID >= 0) {
+		if (ray.primID >= 0) {
 			pixel = vec4(ray.ambient, 1.0);
 		}
 

@@ -13,12 +13,14 @@ namespace P
     class GPURayTracer
     {
         int generateProgram;
-        int bruteFirstHitProgram;
+        int firstHitProgram;
+        int bounceProgram;
         int shadingProgram;
         int[] raySSBOs = { -1, -1 };
         int shadowRaySSBO = -1;
         int rayCounterBO = -1;
         int vertexBO = -1;
+        int BVHBO = -1;
         int faceBO = -1;
         int width = 1;
         int height = 1;
@@ -28,15 +30,16 @@ namespace P
         public GPURayTracer ()
         {
             generateProgram = Shader.CreateComputeShaderProgram("#version 460", new string[] { "GPURayTracer/generate.shader" });
-            bruteFirstHitProgram = Shader.CreateComputeShaderProgram("#version 430", new string[] { "GPURayTracer/intersect.shader", "GPURayTracer/bruteFirstHit.shader" });
-            shadingProgram = Shader.CreateComputeShaderProgram("#version 430", new string[] { "GPURayTracer/intersect.shader", "GPURayTracer/shading.shader" });
+            firstHitProgram = Shader.CreateComputeShaderProgram("#version 430", new string[] { "GPURayTracer/BVHIntersect.shader", "GPURayTracer/BVHFirstHit.shader" });
+            bounceProgram = Shader.CreateComputeShaderProgram("#version 430", new string[] { "GPURayTracer/bouncer.shader" });
+            shadingProgram = Shader.CreateComputeShaderProgram("#version 430", new string[] { "GPURayTracer/BVHIntersect.shader", "GPURayTracer/shading.shader" });
 
-            SetupBuffers(width, height);
+            SetupRayBuffers(width, height);
         }
 
-        void SetupBuffers(int width, int height)
+        void SetupRayBuffers(int width, int height)
         {
-            GL.UseProgram(bruteFirstHitProgram);
+            GL.UseProgram(firstHitProgram);
 
             for (int i = 0; i < 2; i++)
             {
@@ -48,19 +51,6 @@ namespace P
                     (1 + width * height * samplesSqrt * samplesSqrt) * (Vector4.SizeInBytes * 14), IntPtr.Zero, BufferUsageHint.StaticDraw);
                 GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 1 + i, raySSBOs[i]);
             }
-            if (vertexBO == -1) vertexBO = GL.GenBuffer();
-
-            Console.WriteLine("Buffer data: " + MeshLoader.vertices.Length);
-            Console.WriteLine("First: " + MeshLoader.vertices[0]);
-            Console.WriteLine("Indices data: " + MeshLoader.indices.Count);
-            Console.WriteLine("First: " + MeshLoader.indices[0]);
-            GL.BindBuffer(BufferTarget.ShaderStorageBuffer, vertexBO);
-            GL.BufferData(BufferTarget.ShaderStorageBuffer, MeshLoader.vertices.Length * sizeof(float), MeshLoader.vertices, BufferUsageHint.StaticDraw);
-            GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 5, vertexBO);
-
-            GL.BindBuffer(BufferTarget.ShaderStorageBuffer, faceBO);
-            GL.BufferData(BufferTarget.ShaderStorageBuffer, MeshLoader.indices.Count * sizeof(uint), MeshLoader.indices.ToArray(), BufferUsageHint.StaticDraw);
-            GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 6, faceBO);
 
             GL.UseProgram(shadingProgram);
 
@@ -88,6 +78,34 @@ namespace P
             SetupAtomics();
         }
 
+        public void SetupTriangleBuffers(float[] vertices, List<uint> indices, TopLevelBVH topLevelBVH)
+        {
+            GL.UseProgram(firstHitProgram);
+            if (vertexBO == -1) vertexBO = GL.GenBuffer();
+            if (BVHBO == -1) BVHBO = GL.GenBuffer();
+
+            Console.WriteLine("Buffer data: " + vertices.Length);
+            Console.WriteLine("First: " + vertices[0]);
+            Console.WriteLine("Indices data: " + indices.Count);
+            Console.WriteLine("First: " + indices[0]);
+            GL.BindBuffer(BufferTarget.ShaderStorageBuffer, vertexBO);
+            GL.BufferData(BufferTarget.ShaderStorageBuffer, vertices.Length * sizeof(float), vertices, BufferUsageHint.StaticDraw);
+            GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 5, vertexBO);
+
+            GL.BindBuffer(BufferTarget.ShaderStorageBuffer, faceBO);
+            GL.BufferData(BufferTarget.ShaderStorageBuffer, indices.Count * sizeof(uint), indices.ToArray(), BufferUsageHint.StaticDraw);
+            GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 6, faceBO);
+
+            GPUBVH[] gPUBVHs = new GPUBVH[2];
+            gPUBVHs[0] = new GPUBVH(new Vector3(float.MaxValue), new Vector3(float.MinValue), indices.Count, indices.Count);
+            gPUBVHs[1] = new GPUBVH(new Vector3(float.MinValue), new Vector3(float.MaxValue), indices.Count, indices.Count);
+
+            GL.BindBuffer(BufferTarget.ShaderStorageBuffer, BVHBO);
+            GL.BufferData(BufferTarget.ShaderStorageBuffer, 8 * 4 * gPUBVHs.Length, gPUBVHs, BufferUsageHint.StaticDraw);
+            GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 7, BVHBO);
+
+        }
+
         void SetupAtomics()
         {
             if (rayCounterBO == -1)
@@ -99,7 +117,7 @@ namespace P
                 GL.BufferData(BufferTarget.AtomicCounterBuffer, sizeof(uint) * 4, test, BufferUsageHint.StaticDraw);
                 GL.BindBufferBase(BufferRangeTarget.AtomicCounterBuffer, 4, rayCounterBO);
                 
-                GL.UseProgram(bruteFirstHitProgram);
+                GL.UseProgram(firstHitProgram);
                 GL.BindBuffer(BufferTarget.AtomicCounterBuffer, rayCounterBO);
                 GL.BindBufferBase(BufferRangeTarget.AtomicCounterBuffer, 4, rayCounterBO);
             }
@@ -109,7 +127,7 @@ namespace P
         {
             if (width != this.width || height != this.height)
             {
-                SetupBuffers(width, height);
+                SetupRayBuffers(width, height);
                 this.width = width;
                 this.height = height;
             }
@@ -148,7 +166,7 @@ namespace P
                 GL.BufferSubData(BufferTarget.AtomicCounterBuffer, new IntPtr(sizeof(uint) * 2), sizeof(uint), new uint[] { 0 });
 
                 //Swap the in-ray buffer with the out-ray buffer:
-                GL.UseProgram(bruteFirstHitProgram);
+                GL.UseProgram(firstHitProgram);
                 GL.BindBuffer(BufferTarget.ShaderStorageBuffer, raySSBOs[currentInBuffer]);
                 GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 1, raySSBOs[currentInBuffer]);
 
@@ -157,11 +175,17 @@ namespace P
 
                 //Reset the counter for the output buffer, so we can start filling it from 0:
                 GL.BufferSubData(BufferTarget.AtomicCounterBuffer, new IntPtr(sizeof(uint)), sizeof(uint), new uint[] { 0 });
+                //Reset the intersection job and shadow ray job counters
+                GL.BufferSubData(BufferTarget.AtomicCounterBuffer, new IntPtr(sizeof(uint) * 3), sizeof(uint), new uint[] { 0 });
 
                 //Run the programs
                 GL.DispatchCompute(262144 / 64, 1, 1);
                 //GL.MemoryBarrier(MemoryBarrierFlags.ShaderStorageBarrierBit);
                 //GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
+                GL.Finish();
+
+                GL.UseProgram(bounceProgram);
+                GL.DispatchCompute(262144 / 64, 1, 1);
                 GL.Finish();
 
                 GL.UseProgram(shadingProgram);
@@ -189,7 +213,8 @@ namespace P
             if (!disposedValue)
             {
                 GL.DeleteProgram(generateProgram);
-                GL.DeleteProgram(bruteFirstHitProgram);
+                GL.DeleteProgram(firstHitProgram);
+                GL.DeleteProgram(bounceProgram);
                 GL.DeleteProgram(shadingProgram);
 
                 disposedValue = true;
@@ -199,7 +224,8 @@ namespace P
         ~GPURayTracer()
         {
             GL.DeleteProgram(generateProgram);
-            GL.DeleteProgram(bruteFirstHitProgram);
+            GL.DeleteProgram(firstHitProgram);
+            GL.DeleteProgram(bounceProgram);
             GL.DeleteProgram(shadingProgram);
         }
 
@@ -212,10 +238,27 @@ namespace P
             GL.DeleteBuffer(shadowRaySSBO);
             GL.DeleteBuffer(rayCounterBO);
             GL.DeleteBuffer(vertexBO);
+            GL.DeleteBuffer(BVHBO);
             GL.DeleteBuffer(faceBO);
             GL.DeleteTexture(textureHandle);
             Dispose(true);
             GC.SuppressFinalize(this);
+        }
+    }
+
+    struct GPUBVH
+    {
+        Vector3 AABBMin;
+        Vector3 AABBMax;
+        int indicesStart;
+        int indicesEnd;
+
+        public GPUBVH(Vector3 AABBMin, Vector3 AABBMax, int indicesStart, int indicesEnd)
+        {
+            this.AABBMin = AABBMin;
+            this.AABBMax = AABBMax;
+            this.indicesStart = indicesStart;
+            this.indicesEnd = indicesEnd;
         }
     }
 }
