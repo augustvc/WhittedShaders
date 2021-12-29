@@ -12,8 +12,13 @@ layout(binding = 4, offset = 12) uniform atomic_uint intersectionJob;
 
 struct BVH
 {
-	vec3 AABBMin;
-	vec3 AABBMax;
+	float minX;
+	float minY;
+	float minZ;
+	float maxX;
+	float maxY;
+	float maxZ;
+
 	int indicesStart;
 	int indicesEnd;
 };
@@ -61,8 +66,8 @@ void main() {
 		}
 
 		int i = 3;// bvhs[bvhLocation].indicesStart;
-		while (i <= indexBuffer[0]) {
-		//while(i <= bvhs[0].indicesEnd) {
+		//while (i <= indexBuffer[0]) {
+		while(i <= bvhs[1].indicesEnd) {
 			uint triAI = indexBuffer[i++];
 			uint triBI = indexBuffer[i++];
 			uint triCI = indexBuffer[i++];

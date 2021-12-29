@@ -1,0 +1,7 @@
+Each thread increases an atomic counter to fetch a ray from
+a pool, until the pool is depleted*.
+
+*: In practice, this is done per warp: the
+first thread in the warp increases the
+counter by 32. This reduces the number of
+atomic operations.

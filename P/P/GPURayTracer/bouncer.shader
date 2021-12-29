@@ -12,14 +12,6 @@ struct Ray
 	int primID;
 };
 
-struct BVH
-{
-	vec3 AABBMin;
-	vec3 AABBMax;
-	int indicesStart;
-	int indicesEnd;
-};
-
 layout(std430, binding = 1) buffer rayInBuffer
 {
 	Ray rays[];

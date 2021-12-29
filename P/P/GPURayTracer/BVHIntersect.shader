@@ -10,14 +10,6 @@
 	int primID;
 };
 
-struct BVH
-{
-	vec3 AABBMin;
-	vec3 AABBMax;
-	int indicesStart;
-	int indicesEnd;
-};
-
 layout(std430, binding = 1) buffer rayInBuffer
 {
 	Ray rays[];
@@ -31,11 +23,6 @@ layout(std430, binding = 5) buffer vertexBufferObj
 layout(std430, binding = 6) buffer indexBufferObj
 {
 	uint indexBuffer[];
-};
-
-layout(std430, binding = 7) buffer BVHBuffer
-{
-	BVH bvhs[];
 };
 
 

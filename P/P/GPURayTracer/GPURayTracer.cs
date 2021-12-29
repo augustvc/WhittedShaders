@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using OpenTK;
@@ -248,15 +249,25 @@ namespace P
 
     struct GPUBVH
     {
-        Vector3 AABBMin;
-        Vector3 AABBMax;
+        float minX;
+        float minY;
+        float minZ;
+        float maxX;
+        float maxY;
+        float maxZ;
+
         int indicesStart;
         int indicesEnd;
 
         public GPUBVH(Vector3 AABBMin, Vector3 AABBMax, int indicesStart, int indicesEnd)
         {
-            this.AABBMin = AABBMin;
-            this.AABBMax = AABBMax;
+            minX = AABBMin.X;
+            minY = AABBMin.Y;
+            minZ = AABBMin.Z;
+            maxX = AABBMax.X;
+            maxY = AABBMax.Z;
+            maxZ = AABBMax.Z;
+
             this.indicesStart = indicesStart;
             this.indicesEnd = indicesEnd;
         }
