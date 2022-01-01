@@ -33,7 +33,7 @@ void main() {
 			yArm * (float(gl_GlobalInvocationID.y) / float(gl_NumWorkGroups.y * gl_WorkGroupSize.y))
 		),
 		vec3(1.0),
-		1000000.0,
+		(1. / 0.),
 		gl_GlobalInvocationID.x,
 		gl_GlobalInvocationID.y,
 		vec3(0.0),

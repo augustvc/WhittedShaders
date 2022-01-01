@@ -40,12 +40,71 @@ layout(std430, binding = 3) buffer shadowRayBuffer
 
 vec3 lightPosition = vec3(0.0, 120.0, 0.0);
 vec3 lightValue = vec3(6000.0, 6000.0, 6000.0);
+vec3 inverseD;
+int signD[3];
+
+int bvhLocation = 1;
+uint rayNum = 4000000000;
+
+float rayAABB(int location) {
+	// Ray-AABB intersection code inspired by https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-box-intersection
+	int signX = 0;
+	int signY = 0;
+	int signZ = 0;
+
+	if (rays[rayNum].dir.x > 0f) { signX = 1; }
+	if (rays[rayNum].dir.y > 0f) { signY = 1; }
+	if (rays[rayNum].dir.z > 0f) { signZ = 1; }
+
+	vec3[2] bounds = { vec3(bvhs[location].maxX, bvhs[location].maxY, bvhs[location].maxZ),
+		vec3(bvhs[location].minX, bvhs[location].minY, bvhs[location].minZ) };
+
+	/*
+	float tmin = (bounds[signX].x - rays[rayNum].origin.x) / rays[rayNum].dir.x;
+	float tminy = (bounds[signY].y - rays[rayNum].origin.y) / rays[rayNum].dir.y;
+	float tminz = (bounds[signZ].z - rays[rayNum].origin.z) / rays[rayNum].dir.z;
+	
+	if (tminy > tmin) {
+		tmin = tminy;
+	}
+	if (tminz > tmin) {
+		tmin = tminz;
+	}
+
+	return tmin;
+	*/
+	float tmin = (bounds[signX].x - rays[rayNum].origin.x) / rays[rayNum].dir.x;
+	float tmax = (bounds[1 - signX].x - rays[rayNum].origin.x) / rays[rayNum].dir.x;
+	float tymin = (bounds[signY].y - rays[rayNum].origin.y) / rays[rayNum].dir.y;
+	float tymax = (bounds[1 - signY].y - rays[rayNum].origin.y) / rays[rayNum].dir.y;
+
+	if ((tmin > tymax) || (tymin > tmax))
+		return 1. / 0.;
+	if (tymin > tmin)
+		tmin = tymin;
+	if (tymax < tmax)
+		tmax = tymax;
+
+	float tzmin = (bounds[signZ].z - rays[rayNum].origin.z) / rays[rayNum].dir.z;
+	float tzmax = (bounds[1 - signZ].z - rays[rayNum].origin.z) / rays[rayNum].dir.z;
+
+	if ((tmin > tzmax) || (tzmin > tmax))
+		return 1. / 0.;
+	if (tzmin > tmin)
+		tmin = tzmin;
+	if (tzmax < tmax)
+		tmax = tzmax;
+
+	if (tmin < 0f && tmax >= 0f)
+	{
+		return 0f;
+	}
+	return tmin;
+}
 
 void main() {
-	int bvhLocation = 1;
 	int previousLocation = 0;
 	bool rayOutdated = true;
-	uint rayNum = 4000000000;
 
 	while (true) {
 		if (rayOutdated) {
@@ -58,7 +117,7 @@ void main() {
 			rayOutdated = false;
 		}
 		
-		while (true) {
+		while (true) {			
 			if ((bvhs[bvhLocation].indicesStart != bvhs[bvhLocation].indicesEnd) || (previousLocation == bvhLocation * 2 + 1)) {
 				//If in a leaf, or came from right child
 				if (bvhLocation <= 1) {
@@ -68,20 +127,41 @@ void main() {
 				}
 				previousLocation = bvhLocation;
 				bvhLocation = bvhLocation / 2;
-			}
-			else {
+			} else {
 				int addition = 0;
 				if (previousLocation > bvhLocation) {
 					addition = 1;
 				}
-				previousLocation = bvhLocation;
-				bvhLocation = bvhLocation * 2 + addition;				
+				int nextLocation = bvhLocation * 2 + addition;
+
+				float aabbDist = rayAABB(nextLocation);
+				if (aabbDist >= 0f && aabbDist < rays[rayNum].t) {
+					//Traverse the node
+					previousLocation = bvhLocation;
+					bvhLocation = nextLocation;
+				}
+				else {
+					//Don't traverse this node, act like we came from it
+					previousLocation = nextLocation;
+				}
 			}
+
+			/*
+			bvhLocation++;
+			if (bvhLocation >= bvhs[0].indicesEnd) {
+				rayOutdated = true;
+				break;
+			}
+			}*/
 
 			if (bvhs[bvhLocation].indicesStart != bvhs[bvhLocation].indicesEnd) {
 				//Found a leaf to check out. We're done
 				break;
 			}
+		}
+
+		if (rayOutdated) {
+			continue;
 		}
 
 		int i = bvhs[bvhLocation].indicesStart;

@@ -124,9 +124,17 @@ namespace P
 
             foreach (KeyValuePair<int, BVH> node in positions)
             {
+                int length = 0;
+                if(node.Value.isLeaf)
+                {
+                    length = node.Value.triangleIndices.Length;
+                }
                 allNodes[node.Key] = new GPUBVH(node.Value.AABBMin, node.Value.AABBMax,
-                    newIndices.Count, newIndices.Count + node.Value.triangleIndices.Length);
-                newIndices.AddRange(node.Value.triangleIndices);
+                    newIndices.Count, newIndices.Count + length);
+                if (length > 0)
+                {
+                    newIndices.AddRange(node.Value.triangleIndices);
+                }
             }
 
             GL.BindBuffer(BufferTarget.ShaderStorageBuffer, faceBO);
@@ -136,6 +144,9 @@ namespace P
             //gPUBVHs = new List<GPUBVH>();
             //gPUBVHs.Add(new GPUBVH(new Vector3(float.MaxValue), new Vector3(float.MinValue), 0, 2));
             //gPUBVHs.Add(new GPUBVH(new Vector3(float.MinValue), new Vector3(float.MaxValue), 0, newIndices.Count));
+
+            Console.WriteLine("All nodes: " + allNodes.Length);
+            Console.WriteLine("start 1, end 1: " + allNodes[1].indicesStart + ", " + allNodes[1].indicesEnd);
 
             GL.BindBuffer(BufferTarget.ShaderStorageBuffer, BVHBO);
             GL.BufferData(BufferTarget.ShaderStorageBuffer, 8 * 4 * allNodes.Length, allNodes, BufferUsageHint.StaticDraw);
@@ -180,7 +191,7 @@ namespace P
             GL.Uniform3(GL.GetUniformLocation(generateProgram, "yArm"), yRange);
 
             GL.BindBuffer(BufferTarget.AtomicCounterBuffer, rayCounterBO);
-            GL.BufferData(BufferTarget.AtomicCounterBuffer, sizeof(uint) * 4, new uint[] { 0, 0, 0, 0 }, BufferUsageHint.StaticDraw);
+            GL.BufferData(BufferTarget.AtomicCounterBuffer, sizeof(uint) * 4, new uint[] { 0, (uint)(width * samplesSqrt * height * samplesSqrt), 0, 0 }, BufferUsageHint.StaticDraw);
  
             int currentInBuffer = 0;
 
@@ -194,7 +205,7 @@ namespace P
             GL.Finish();
 
 
-            int maximumBounces = 32;
+            int maximumBounces = 2;
             for (int i = 0; i < maximumBounces; i++)
             {
                 //Reset the shadow ray counter
@@ -301,7 +312,7 @@ namespace P
             minY = AABBMin.Y;
             minZ = AABBMin.Z;
             maxX = AABBMax.X;
-            maxY = AABBMax.Z;
+            maxY = AABBMax.Y;
             maxZ = AABBMax.Z;
 
             this.indicesStart = indicesStart;

@@ -56,7 +56,10 @@ namespace P
             indices.Add(3);
             return;*/
             AssimpContext assimpContext = new AssimpContext();
-            Scene model = assimpContext.ImportFile("../../models/xyzrgb_dragon.obj");
+            string teapot = "../../models/teapot.obj";
+            string man = "../../models/man.obj";
+            string dragon = "../../models/xyzrgb_dragon.obj";
+            Scene model = assimpContext.ImportFile(dragon);
 
             Console.WriteLine("... : " + model.MeshCount);
             for (int i = 0; i < model.MeshCount; i++)
