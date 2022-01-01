@@ -93,16 +93,52 @@ namespace P
             GL.BufferData(BufferTarget.ShaderStorageBuffer, vertices.Length * sizeof(float), vertices, BufferUsageHint.StaticDraw);
             GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 5, vertexBO);
 
+            Dictionary<int, BVH> positions = new Dictionary<int, BVH>();
+            positions.Add(1, topLevelBVH.TopBVH);
+
+            int largestId = 1;
+            void addChildren(int id)
+            {
+                if (id > largestId)
+                {
+                    largestId = id;
+                }
+                BVH current = positions[id];
+
+                if (!current.isLeaf)
+                {
+                    positions[id * 2] = current.leftChild;
+                    positions[id * 2 + 1] = current.rightChild;
+                    addChildren(id * 2);
+                    addChildren(id * 2 + 1);
+                }
+            }
+
+            addChildren(1);
+            largestId += 1;
+
+            GPUBVH[] allNodes = new GPUBVH[largestId];
+            allNodes[0] = new GPUBVH(new Vector3(float.MaxValue), new Vector3(float.MinValue), 0, largestId);
+
+            List<uint> newIndices = new List<uint>();
+
+            foreach (KeyValuePair<int, BVH> node in positions)
+            {
+                allNodes[node.Key] = new GPUBVH(node.Value.AABBMin, node.Value.AABBMax,
+                    newIndices.Count, newIndices.Count + node.Value.triangleIndices.Length);
+                newIndices.AddRange(node.Value.triangleIndices);
+            }
+
             GL.BindBuffer(BufferTarget.ShaderStorageBuffer, faceBO);
-            GL.BufferData(BufferTarget.ShaderStorageBuffer, indices.Count * sizeof(uint), indices.ToArray(), BufferUsageHint.StaticDraw);
+            GL.BufferData(BufferTarget.ShaderStorageBuffer, newIndices.Count * sizeof(uint), newIndices.ToArray(), BufferUsageHint.StaticDraw);
             GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 6, faceBO);
 
-            GPUBVH[] gPUBVHs = new GPUBVH[2];
-            gPUBVHs[0] = new GPUBVH(new Vector3(float.MaxValue), new Vector3(float.MinValue), indices.Count, indices.Count);
-            gPUBVHs[1] = new GPUBVH(new Vector3(float.MinValue), new Vector3(float.MaxValue), indices.Count, indices.Count);
+            //gPUBVHs = new List<GPUBVH>();
+            //gPUBVHs.Add(new GPUBVH(new Vector3(float.MaxValue), new Vector3(float.MinValue), 0, 2));
+            //gPUBVHs.Add(new GPUBVH(new Vector3(float.MinValue), new Vector3(float.MaxValue), 0, newIndices.Count));
 
             GL.BindBuffer(BufferTarget.ShaderStorageBuffer, BVHBO);
-            GL.BufferData(BufferTarget.ShaderStorageBuffer, 8 * 4 * gPUBVHs.Length, gPUBVHs, BufferUsageHint.StaticDraw);
+            GL.BufferData(BufferTarget.ShaderStorageBuffer, 8 * 4 * allNodes.Length, allNodes, BufferUsageHint.StaticDraw);
             GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 7, BVHBO);
 
         }
@@ -249,15 +285,15 @@ namespace P
 
     struct GPUBVH
     {
-        float minX;
-        float minY;
-        float minZ;
-        float maxX;
-        float maxY;
-        float maxZ;
+        public float minX;
+        public float minY;
+        public float minZ;
+        public float maxX;
+        public float maxY;
+        public float maxZ;
 
-        int indicesStart;
-        int indicesEnd;
+        public int indicesStart;
+        public int indicesEnd;
 
         public GPUBVH(Vector3 AABBMin, Vector3 AABBMax, int indicesStart, int indicesEnd)
         {

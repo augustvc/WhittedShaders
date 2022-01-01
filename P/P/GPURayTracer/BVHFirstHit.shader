@@ -42,7 +42,8 @@ vec3 lightPosition = vec3(0.0, 120.0, 0.0);
 vec3 lightValue = vec3(6000.0, 6000.0, 6000.0);
 
 void main() {
-	uint bvhLocation = 1;
+	int bvhLocation = 1;
+	int previousLocation = 0;
 	bool rayOutdated = true;
 	uint rayNum = 4000000000;
 
@@ -53,21 +54,38 @@ void main() {
 				break;
 			}
 			bvhLocation = 1;
+			previousLocation = 0;
 			rayOutdated = false;
 		}
 		
+		while (true) {
+			if ((bvhs[bvhLocation].indicesStart != bvhs[bvhLocation].indicesEnd) || (previousLocation == bvhLocation * 2 + 1)) {
+				//If in a leaf, or came from right child
+				if (bvhLocation <= 1) {
+					//In root, there is no parent.
+					rayOutdated = true;
+					break;
+				}
+				previousLocation = bvhLocation;
+				bvhLocation = bvhLocation / 2;
+			}
+			else {
+				int addition = 0;
+				if (previousLocation > bvhLocation) {
+					addition = 1;
+				}
+				previousLocation = bvhLocation;
+				bvhLocation = bvhLocation * 2 + addition;				
+			}
 
-		while (bvhs[bvhLocation].indicesStart == bvhs[bvhLocation].indicesEnd) {
-			bvhLocation++;
-			if (bvhLocation >= bvhs[0].indicesEnd) {
-				rayOutdated = true;
+			if (bvhs[bvhLocation].indicesStart != bvhs[bvhLocation].indicesEnd) {
+				//Found a leaf to check out. We're done
 				break;
 			}
 		}
 
-		int i = 3;// bvhs[bvhLocation].indicesStart;
-		//while (i <= indexBuffer[0]) {
-		while(i <= bvhs[1].indicesEnd) {
+		int i = bvhs[bvhLocation].indicesStart;
+		while(i <= bvhs[bvhLocation].indicesEnd) {
 			uint triAI = indexBuffer[i++];
 			uint triBI = indexBuffer[i++];
 			uint triCI = indexBuffer[i++];
