@@ -4,6 +4,7 @@ struct Ray
 {
 	vec3 origin;
 	vec3 dir;
+	vec3 invdir;
 	vec3 energy;
 	float t;
 	uint pixelX;
@@ -25,13 +26,16 @@ uniform vec3 xArm = vec3(2.0, 0.0, 0.0);
 uniform vec3 yArm = vec3(0.0, 2.0, 0.0);
 
 void main() {
+	vec3 dir = normalize(
+		p1 +
+		xArm * (float(gl_GlobalInvocationID.x) / float(gl_NumWorkGroups.x * gl_WorkGroupSize.x)) +
+		yArm * (float(gl_GlobalInvocationID.y) / float(gl_NumWorkGroups.y * gl_WorkGroupSize.y))
+	);
+
 	rays[atomicCounterIncrement(rayCountIn)] = Ray(
 		cameraOrigin,
-		normalize(
-			p1 +
-			xArm * (float(gl_GlobalInvocationID.x) / float(gl_NumWorkGroups.x * gl_WorkGroupSize.x)) +
-			yArm * (float(gl_GlobalInvocationID.y) / float(gl_NumWorkGroups.y * gl_WorkGroupSize.y))
-		),
+		dir,
+		1. / dir,
 		vec3(1.0),
 		(1. / 0.),
 		gl_GlobalInvocationID.x,

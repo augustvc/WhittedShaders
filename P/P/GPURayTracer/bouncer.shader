@@ -4,6 +4,7 @@ struct Ray
 {
 	vec3 origin;
 	vec3 dir;
+	vec3 invdir;
 	vec3 energy;
 	float t;
 	uint pixelX;
@@ -150,6 +151,7 @@ void main() {
 			raysOut[atomicCounterIncrement(rayCountOut)] = Ray(
 				rays[rayNum].origin + rays[rayNum].dir * rays[rayNum].t + normal * 0.0001,
 				rays[rayNum].dir + ndotr * 2 * normal,
+				1. / (rays[rayNum].dir + ndotr * 2 * normal),
 				rays[rayNum].energy * mat.specular,
 				100000, rays[rayNum].pixelX, rays[rayNum].pixelY,
 				vec3(0.0),
@@ -167,9 +169,11 @@ void main() {
 
 			vec3 diffuseEnergy = mat.diffuse * mat.color * finalLight;
 
+			vec3 srdir = normalize(lightPosition - srOrigin);
 			Ray shadowRay = Ray(
 				srOrigin,
-				normalize(lightPosition - srOrigin),
+				srdir,
+				1. / srdir,
 				diffuseEnergy * rays[rayNum].energy,
 				length(lightPosition - srOrigin), rays[rayNum].pixelX, rays[rayNum].pixelY,
 				mat.color * mat.diffuse * 0.05,

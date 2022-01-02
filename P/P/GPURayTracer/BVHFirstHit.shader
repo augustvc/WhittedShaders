@@ -40,43 +40,23 @@ layout(std430, binding = 3) buffer shadowRayBuffer
 
 vec3 lightPosition = vec3(0.0, 120.0, 0.0);
 vec3 lightValue = vec3(6000.0, 6000.0, 6000.0);
-vec3 inverseD;
-int signD[3];
 
 int bvhLocation = 1;
 uint rayNum = 4000000000;
 
 float rayAABB(int location) {
 	// Ray-AABB intersection code inspired by https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-box-intersection
-	int signX = 0;
-	int signY = 0;
-	int signZ = 0;
-
-	if (rays[rayNum].dir.x > 0f) { signX = 1; }
-	if (rays[rayNum].dir.y > 0f) { signY = 1; }
-	if (rays[rayNum].dir.z > 0f) { signZ = 1; }
+	int signX = rays[rayNum].dir.x > 0f ? 1 : 0;
+	int signY = rays[rayNum].dir.y > 0f ? 1 : 0;
+	int signZ = rays[rayNum].dir.z > 0f ? 1 : 0;
 
 	vec3[2] bounds = { vec3(bvhs[location].maxX, bvhs[location].maxY, bvhs[location].maxZ),
 		vec3(bvhs[location].minX, bvhs[location].minY, bvhs[location].minZ) };
 
-	/*
-	float tmin = (bounds[signX].x - rays[rayNum].origin.x) / rays[rayNum].dir.x;
-	float tminy = (bounds[signY].y - rays[rayNum].origin.y) / rays[rayNum].dir.y;
-	float tminz = (bounds[signZ].z - rays[rayNum].origin.z) / rays[rayNum].dir.z;
-	
-	if (tminy > tmin) {
-		tmin = tminy;
-	}
-	if (tminz > tmin) {
-		tmin = tminz;
-	}
-
-	return tmin;
-	*/
-	float tmin = (bounds[signX].x - rays[rayNum].origin.x) / rays[rayNum].dir.x;
-	float tmax = (bounds[1 - signX].x - rays[rayNum].origin.x) / rays[rayNum].dir.x;
-	float tymin = (bounds[signY].y - rays[rayNum].origin.y) / rays[rayNum].dir.y;
-	float tymax = (bounds[1 - signY].y - rays[rayNum].origin.y) / rays[rayNum].dir.y;
+	float tmin = (bounds[signX].x - rays[rayNum].origin.x) * rays[rayNum].invdir.x;
+	float tmax = (bounds[1 - signX].x - rays[rayNum].origin.x) * rays[rayNum].invdir.x;
+	float tymin = (bounds[signY].y - rays[rayNum].origin.y) * rays[rayNum].invdir.y;
+	float tymax = (bounds[1 - signY].y - rays[rayNum].origin.y) * rays[rayNum].invdir.y;
 
 	if ((tmin > tymax) || (tymin > tmax))
 		return 1. / 0.;
@@ -85,8 +65,8 @@ float rayAABB(int location) {
 	if (tymax < tmax)
 		tmax = tymax;
 
-	float tzmin = (bounds[signZ].z - rays[rayNum].origin.z) / rays[rayNum].dir.z;
-	float tzmax = (bounds[1 - signZ].z - rays[rayNum].origin.z) / rays[rayNum].dir.z;
+	float tzmin = (bounds[signZ].z - rays[rayNum].origin.z) * rays[rayNum].invdir.z;
+	float tzmax = (bounds[1 - signZ].z - rays[rayNum].origin.z) * rays[rayNum].invdir.z;
 
 	if ((tmin > tzmax) || (tzmin > tmax))
 		return 1. / 0.;
@@ -117,42 +97,54 @@ void main() {
 			rayOutdated = false;
 		}
 		
-		while (true) {			
-			if ((bvhs[bvhLocation].indicesStart != bvhs[bvhLocation].indicesEnd) || (previousLocation == bvhLocation * 2 + 1)) {
-				//If in a leaf, or came from right child
+		while (true) {
+			if (bvhs[bvhLocation].indicesStart != bvhs[bvhLocation].indicesEnd) {
+				//Make sure we're not in a leaf
+				previousLocation = bvhLocation;
+				bvhLocation = bvhLocation / 2;
+			}
+			
+			int near = bvhLocation * 2;
+			int far = near + 1;
+			float nearDist = rayAABB(near);
+			float farDist = rayAABB(far);
+
+			if (nearDist > farDist) {
+				int tempi = far;
+				far = near;
+				near = tempi;
+
+				float tempf = farDist;
+				farDist = nearDist;
+				nearDist = tempf;
+			}
+
+			if (previousLocation == far) {
 				if (bvhLocation <= 1) {
-					//In root, there is no parent.
 					rayOutdated = true;
 					break;
 				}
 				previousLocation = bvhLocation;
 				bvhLocation = bvhLocation / 2;
-			} else {
-				int addition = 0;
+			}
+			else {
+				int nextChild = near;
+				float nextDist = nearDist;
 				if (previousLocation > bvhLocation) {
-					addition = 1;
+					nextChild = far;
+					nextDist = farDist;
 				}
-				int nextLocation = bvhLocation * 2 + addition;
 
-				float aabbDist = rayAABB(nextLocation);
-				if (aabbDist >= 0f && aabbDist < rays[rayNum].t) {
+				if (nextDist >= 0f && nextDist < rays[rayNum].t) {
 					//Traverse the node
 					previousLocation = bvhLocation;
-					bvhLocation = nextLocation;
+					bvhLocation = nextChild;
 				}
 				else {
 					//Don't traverse this node, act like we came from it
-					previousLocation = nextLocation;
+					previousLocation = nextChild;
 				}
 			}
-
-			/*
-			bvhLocation++;
-			if (bvhLocation >= bvhs[0].indicesEnd) {
-				rayOutdated = true;
-				break;
-			}
-			}*/
 
 			if (bvhs[bvhLocation].indicesStart != bvhs[bvhLocation].indicesEnd) {
 				//Found a leaf to check out. We're done

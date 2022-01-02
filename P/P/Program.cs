@@ -25,7 +25,7 @@ namespace P
             {
                 title = "GPU Ray Tracer";
             }
-            using (Game game = new Game(500, 400, title))
+            using (Game game = new Game(1920, 1000, title))
             {
                 game.Run(60.0, 0.0);
             }

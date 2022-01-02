@@ -11,7 +11,7 @@ using OpenTK;
 
 public static class Camera
 {
-    static Vector3 cameraFront = new Vector3(0.0f, 0.0f, 1.0f);
+    static Vector3 cameraFront = new Vector3(0.00001f, 0.00001f, 1.00001f);
 
 
     static bool Focused = true;

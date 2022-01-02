@@ -2,6 +2,7 @@
 {
 	vec3 origin;
 	vec3 dir;
+	vec3 invdir;
 	vec3 energy;
 	float t;
 	uint pixelX;
