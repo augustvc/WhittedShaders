@@ -97,7 +97,7 @@ namespace P
                 int binNr = 0;
                 for (int j = i ; j < i + 3; j++)
                 {
-                    int newBinNr = (int)((vertices[bvh.triangleIndices[j] * 8 + splitAxis] - bvh.AABBMin[splitAxis]) * binNumberMult);
+                    int newBinNr = (int)((vertices[bvh.triangleIndices[j] * 3 + splitAxis] - bvh.AABBMin[splitAxis]) * binNumberMult);
                     if (newBinNr > binNr) {
                         binNr = newBinNr;
                     }
@@ -107,12 +107,12 @@ namespace P
                 {
                     for(int a = 0; a < 3; a++)
                     {
-                        if (vertices[bvh.triangleIndices[j] * 8 + a] < binMins[binNr][a]) {
-                            binMins[binNr][a] = vertices[bvh.triangleIndices[j] * 8 + a];
+                        if (vertices[bvh.triangleIndices[j] * 3 + a] < binMins[binNr][a]) {
+                            binMins[binNr][a] = vertices[bvh.triangleIndices[j] * 3 + a];
                         }
-                        if (vertices[bvh.triangleIndices[j] * 8 + a] > binMaxes[binNr][a])
+                        if (vertices[bvh.triangleIndices[j] * 3 + a] > binMaxes[binNr][a])
                         {
-                            binMaxes[binNr][a] = vertices[bvh.triangleIndices[j] * 8 + a];
+                            binMaxes[binNr][a] = vertices[bvh.triangleIndices[j] * 3 + a];
                         }
                     }
                 }
@@ -202,7 +202,7 @@ namespace P
                 int binNr = 0;
                 for (int j = i; j < i + 3; j++)
                 {
-                    int newBinNr = (int)((vertices[bvh.triangleIndices[j] * 8 + splitAxis] - bvh.AABBMin[splitAxis]) * binNumberMult);
+                    int newBinNr = (int)((vertices[bvh.triangleIndices[j] * 3 + splitAxis] - bvh.AABBMin[splitAxis]) * binNumberMult);
                     if (newBinNr > binNr)
                     {
                         binNr = newBinNr;
@@ -368,9 +368,9 @@ class FourWayBVH
             for (int i = 0; i < triangleIndices.Length; i += 3)
             {
                 
-                Vector3 a = new Vector3(vertices[triangleIndices[i] * 8], vertices[triangleIndices[i] * 8 + 1], vertices[triangleIndices[i] * 8 + 2]);
-                Vector3 b = new Vector3(vertices[triangleIndices[i + 1] * 8], vertices[triangleIndices[i + 1] * 8 + 1], vertices[triangleIndices[i + 1] * 8 + 2]);
-                Vector3 c = new Vector3(vertices[triangleIndices[i + 2] * 8], vertices[triangleIndices[i + 2] * 8 + 1], vertices[triangleIndices[i + 2] * 8 + 2]);
+                Vector3 a = new Vector3(vertices[triangleIndices[i] * 3], vertices[triangleIndices[i] * 3 + 1], vertices[triangleIndices[i] * 3 + 2]);
+                Vector3 b = new Vector3(vertices[triangleIndices[i + 1] * 3], vertices[triangleIndices[i + 1] * 3 + 1], vertices[triangleIndices[i + 1] * 3 + 2]);
+                Vector3 c = new Vector3(vertices[triangleIndices[i + 2] * 3], vertices[triangleIndices[i + 2] * 3 + 1], vertices[triangleIndices[i + 2] * 3 + 2]);
 
                 Vector3 ab = b - a;
                 Vector3 ac = c - a;
@@ -626,13 +626,13 @@ class BVH
             {
                 for (var a = 0; a < 3; a++)
                 {
-                    if (vertices[indices[j] * 8 + a] < AABBMinTemp[a])
+                    if (vertices[indices[j] * 3 + a] < AABBMinTemp[a])
                     {
-                        AABBMinTemp[a] = vertices[indices[j] * 8 + a];
+                        AABBMinTemp[a] = vertices[indices[j] * 3 + a];
                     }
-                    if (vertices[indices[j] * 8 + a] > AABBMaxTemp[a])
+                    if (vertices[indices[j] * 3 + a] > AABBMaxTemp[a])
                     {
-                        AABBMaxTemp[a] = vertices[indices[j] * 8 + a];
+                        AABBMaxTemp[a] = vertices[indices[j] * 3 + a];
                     }
                 }
             }
@@ -650,7 +650,7 @@ class BVH
             maxLock = 0;
         }
 
-        if (TopLevelBVH.jobs.Count == 0 && indices.Length >= interval * 8)
+        if (TopLevelBVH.jobs.Count == 0 && indices.Length >= interval * 3)
         {
             Parallel.For(0, (indices.Length / interval) + 1, (i) => updateAABBs(i));
         }
@@ -660,13 +660,13 @@ class BVH
             {
                 for (var a = 0; a < 3; a++)
                 {
-                    if (vertices[indices[i] * 8 + a] < AABBMinFinal[a])
+                    if (vertices[indices[i] * 3 + a] < AABBMinFinal[a])
                     {
-                        AABBMinFinal[a] = vertices[indices[i] * 8 + a];
+                        AABBMinFinal[a] = vertices[indices[i] * 3 + a];
                     }
-                    if (vertices[indices[i] * 8 + a] > AABBMaxFinal[a])
+                    if (vertices[indices[i] * 3 + a] > AABBMaxFinal[a])
                     {
-                        AABBMaxFinal[a] = vertices[indices[i] * 8 + a];
+                        AABBMaxFinal[a] = vertices[indices[i] * 3 + a];
                     }
                 }
             }
@@ -684,9 +684,9 @@ class BVH
         {
             for (int i = 0; i < triangleIndices.Length; i += 3)
             {
-                Vector3 a = new Vector3(vertices[triangleIndices[i] * 8], vertices[triangleIndices[i] * 8 + 1], vertices[triangleIndices[i] * 8 + 2]);
-                Vector3 b = new Vector3(vertices[triangleIndices[i + 1] * 8], vertices[triangleIndices[i + 1] * 8 + 1], vertices[triangleIndices[i + 1] * 8 + 2]);
-                Vector3 c = new Vector3(vertices[triangleIndices[i + 2] * 8], vertices[triangleIndices[i + 2] * 8 + 1], vertices[triangleIndices[i + 2] * 8 + 2]);
+                Vector3 a = new Vector3(vertices[triangleIndices[i] * 3], vertices[triangleIndices[i] * 3 + 1], vertices[triangleIndices[i] * 3 + 2]);
+                Vector3 b = new Vector3(vertices[triangleIndices[i + 1] * 3], vertices[triangleIndices[i + 1] * 3 + 1], vertices[triangleIndices[i + 1] * 3 + 2]);
+                Vector3 c = new Vector3(vertices[triangleIndices[i + 2] * 3], vertices[triangleIndices[i + 2] * 3 + 1], vertices[triangleIndices[i + 2] * 3 + 2]);
 
                 Vector3 ab = b - a;
                 Vector3 ac = c - a;

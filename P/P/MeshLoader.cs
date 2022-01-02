@@ -70,33 +70,15 @@ namespace P
                     Console.WriteLine("No normals in this mesh... Setting them all to point up??");
                 }
 
-                MeshLoader.vertices = new float[8 * model.Meshes[i].Vertices.Count];
+                MeshLoader.vertices = new float[model.Meshes[i].Vertices.Count * 3];
                 int j = 0;
-                while (j < vertices.Count * 8)
+                while (j < vertices.Count * 3)
                 {
-                    Vector3D vertex = model.Meshes[i].Vertices[j / 8];
+                    Vector3D vertex = model.Meshes[i].Vertices[j / 3];
                     //Vector3D texCoords = model.Meshes[i].TextureCoordinateChannels[0][j / 8];
                     for (int k = 0; k < 3; k++)
                     {
                         MeshLoader.vertices[j++] = vertex[k];// * 0.1f;
-                    }
-                    if (model.Meshes[i].HasNormals)
-                    {
-                        Vector3D normal = model.Meshes[i].Normals[j / 8];
-                        for (int k = 0; k < 3; k++)
-                        {
-                            MeshLoader.vertices[j++] = normal[k];
-                        }
-                    } else
-                    {
-                        MeshLoader.vertices[j++] = 0f;
-                        MeshLoader.vertices[j++] = 1f;
-                        MeshLoader.vertices[j++] = 0f;
-                    }
-               
-                    for (int k = 0; k < 2; k++)
-                    {
-                        j++; //MeshLoader.vertices[j++] = texCoords[k];
                     }
                 }
                 j = 0;
