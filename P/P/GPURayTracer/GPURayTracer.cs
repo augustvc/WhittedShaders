@@ -153,7 +153,6 @@ namespace P
             //gPUBVHs.Add(new GPUBVH(new Vector3(float.MinValue), new Vector3(float.MaxValue), 0, newIndices.Count));
 
             Console.WriteLine("All nodes: " + allNodes.Length);
-            Console.WriteLine("start 1, end 1: " + allNodes[0].indicesStart + ", " + allNodes[0].indicesEnd);
 
             GL.BindBuffer(BufferTarget.ShaderStorageBuffer, BVHBO);
             GL.BufferData(BufferTarget.ShaderStorageBuffer, 11 * 4 * allNodes.Length, allNodes.ToArray(), BufferUsageHint.StaticDraw);
