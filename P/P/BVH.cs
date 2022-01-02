@@ -67,6 +67,12 @@ namespace P
 
         void RecursiveSplit(BVH bvh)
         {
+            if(bvh.triangleIndices.Length < 8000)
+            {
+                //Console.WriteLine("Making too small bvh for testing purposes (remove later)");
+               // return;
+            }
+
             int binCount = 8;
 
             int splitAxis = 0;
@@ -576,6 +582,8 @@ class FourWayBVH
 
 class BVH
 {
+    static int nodeCount = 0;
+    public int nodeNumber = 0;
     public const int interval = 3000;
     public Vector3 AABBMin;
     public Vector3 AABBMax;
@@ -591,6 +599,7 @@ class BVH
         MakeAABB(vertices, indices, out AABBMin, out AABBMax);
         SAH = CalculateHalfSA(AABBMin, AABBMax) * (indices.Length * 0.3333f); // Static cost of intersecting AABB: add 5 to indices
         triangleIndices = indices;
+        nodeNumber = Interlocked.Increment(ref nodeCount);
     }
 
     public BVH(uint[] indices, Vector3 AABBMin, Vector3 AABBMax, float SAH)
@@ -599,6 +608,7 @@ class BVH
         this.AABBMax = AABBMax;
         this.SAH = SAH;
         triangleIndices = indices;
+        nodeNumber = Interlocked.Increment(ref nodeCount);
     }
 
     public static float CalculateHalfSA(Vector3 AABBMin, Vector3 AABBMax)

@@ -1,4 +1,39 @@
-﻿layout(local_size_x = 64, local_size_y = 1) in;
+﻿layout(local_size_x = 32, local_size_y = 1) in;
+
+struct Ray
+{
+	vec3 origin;
+	vec3 dir;
+	vec3 invdir;
+	vec3 energy;
+	float t;
+	uint pixelX;
+	uint pixelY;
+	vec3 ambient;
+	int primID;
+};
+
+layout(std430, binding = 1) buffer rayInBuffer
+{
+	Ray rays[];
+};
+
+layout(std430, binding = 5) buffer vertexBufferObj
+{
+	float vertexBuffer[];
+};
+
+layout(std430, binding = 6) buffer indexBufferObj
+{
+	uint indexBuffer[];
+};
+
+struct Material
+{
+	vec3 color;
+	float diffuse;
+	float specular;
+};
 
 layout(std430, binding = 2) buffer rayOutBuffer
 {
@@ -21,6 +56,10 @@ struct BVH
 
 	int indicesStart;
 	int indicesEnd;
+
+	int parent;
+	int leftChild;
+	int rightChild;
 };
 
 layout(std430, binding = 7) buffer BVHBuffer
@@ -28,20 +67,6 @@ layout(std430, binding = 7) buffer BVHBuffer
 	BVH bvhs[];
 };
 
-layout(std430, binding = 3) buffer shadowRayBuffer
-{
-	Ray shadowRays[];
-};
-
-//Light lights[] = Light[](
-	//  Light(vec3(0.0, 12.0, 0.0), vec3(156.0, 156.0, 156.0))
-	//, Light(vec3(0.0, -8.0, 0.0), vec3(2.0, 0.0, 16.0))
-//);
-
-vec3 lightPosition = vec3(0.0, 120.0, 0.0);
-vec3 lightValue = vec3(6000.0, 6000.0, 6000.0);
-
-int bvhLocation = 1;
 uint rayNum = 4000000000;
 
 float rayAABB(int location) {
@@ -59,53 +84,51 @@ float rayAABB(int location) {
 	float tymax = (bounds[1 - signY].y - rays[rayNum].origin.y) * rays[rayNum].invdir.y;
 
 	if ((tmin > tymax) || (tymin > tmax))
-		return 1. / 0.;
-	if (tymin > tmin)
-		tmin = tymin;
-	if (tymax < tmax)
-		tmax = tymax;
+		tmin = 1. / 0.;
+	tmin = max(tymin, tmin);
+	tmax = min(tmax, tymax);
 
 	float tzmin = (bounds[signZ].z - rays[rayNum].origin.z) * rays[rayNum].invdir.z;
 	float tzmax = (bounds[1 - signZ].z - rays[rayNum].origin.z) * rays[rayNum].invdir.z;
 
 	if ((tmin > tzmax) || (tzmin > tmax))
-		return 1. / 0.;
-	if (tzmin > tmin)
-		tmin = tzmin;
-	if (tzmax < tmax)
-		tmax = tzmax;
+		tmin = 1. / 0.;
+	tmin = max(tzmin, tmin);
+	tmax = min(tzmax, tmax);
 
 	if (tmin < 0f && tmax >= 0f)
 	{
-		return 0f;
+		tmin = 0f;
 	}
 	return tmin;
 }
 
 void main() {
-	int previousLocation = 0;
+	int bvhLocation = 0;
+	int previousLocation = -1;
 	bool rayOutdated = true;
+	uint inRays = atomicCounter(rayCountIn);
 
-	while (true) {
+	while (true) {		
 		if (rayOutdated) {
 			rayNum = atomicCounterIncrement(intersectionJob);
-			if (rayNum >= atomicCounter(rayCountIn)) {
+			if (rayNum >= inRays) {
 				break;
 			}
-			bvhLocation = 1;
-			previousLocation = 0;
+			bvhLocation = 0;
+			previousLocation = -1;
 			rayOutdated = false;
 		}
-		
+
 		while (true) {
 			if (bvhs[bvhLocation].indicesStart != bvhs[bvhLocation].indicesEnd) {
 				//Make sure we're not in a leaf
 				previousLocation = bvhLocation;
-				bvhLocation = bvhLocation / 2;
+				bvhLocation = bvhs[bvhLocation].parent;
 			}
 			
-			int near = bvhLocation * 2;
-			int far = near + 1;
+			int near = bvhs[bvhLocation].leftChild;
+			int far = bvhs[bvhLocation].rightChild;
 			float nearDist = rayAABB(near);
 			float farDist = rayAABB(far);
 
@@ -120,22 +143,22 @@ void main() {
 			}
 
 			if (previousLocation == far) {
-				if (bvhLocation <= 1) {
+				if (bvhLocation == 0) {
 					rayOutdated = true;
 					break;
 				}
 				previousLocation = bvhLocation;
-				bvhLocation = bvhLocation / 2;
-			}
-			else {
+				bvhLocation = bvhs[bvhLocation].parent;
+			} else {
 				int nextChild = near;
 				float nextDist = nearDist;
-				if (previousLocation > bvhLocation) {
+
+				if (previousLocation == near) {
 					nextChild = far;
 					nextDist = farDist;
 				}
 
-				if (nextDist >= 0f && nextDist < rays[rayNum].t) {
+				if(nextDist >= 0f && nextDist < rays[rayNum].t) {
 					//Traverse the node
 					previousLocation = bvhLocation;
 					bvhLocation = nextChild;

@@ -31,7 +31,7 @@ namespace P
         public GPURayTracer ()
         {
             generateProgram = Shader.CreateComputeShaderProgram("#version 460", new string[] { "GPURayTracer/generate.shader" });
-            firstHitProgram = Shader.CreateComputeShaderProgram("#version 430", new string[] { "GPURayTracer/BVHIntersect.shader", "GPURayTracer/BVHFirstHit.shader" });
+            firstHitProgram = Shader.CreateComputeShaderProgram("#version 430", new string[] { "GPURayTracer/BVHFirstHit.shader" });
             bounceProgram = Shader.CreateComputeShaderProgram("#version 430", new string[] { "GPURayTracer/bouncer.shader" });
             shadingProgram = Shader.CreateComputeShaderProgram("#version 430", new string[] { "GPURayTracer/BVHIntersect.shader", "GPURayTracer/shading.shader" });
 
@@ -93,47 +93,54 @@ namespace P
             GL.BufferData(BufferTarget.ShaderStorageBuffer, vertices.Length * sizeof(float), vertices, BufferUsageHint.StaticDraw);
             GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 5, vertexBO);
 
-            Dictionary<int, BVH> positions = new Dictionary<int, BVH>();
-            positions.Add(1, topLevelBVH.TopBVH);
 
-            int largestId = 1;
-            void addChildren(int id)
+            List<BVH> order = new List<BVH>();
+            Dictionary<int, int> nrToOrder = new Dictionary<int, int>();
+            List<BVH> stack = new List<BVH>();
+
+            stack.Add(topLevelBVH.TopBVH);
+
+            while(stack.Count > 0)
             {
-                if (id > largestId)
-                {
-                    largestId = id;
-                }
-                BVH current = positions[id];
+                BVH next = stack[stack.Count - 1];
+                stack.RemoveAt(stack.Count - 1);
 
-                if (!current.isLeaf)
+                order.Add(next);
+                nrToOrder.Add(next.nodeNumber, order.Count - 1);
+
+                if(!next.isLeaf)
                 {
-                    positions[id * 2] = current.leftChild;
-                    positions[id * 2 + 1] = current.rightChild;
-                    addChildren(id * 2);
-                    addChildren(id * 2 + 1);
+                    stack.Add(next.leftChild);
+                    stack.Add(next.rightChild);
                 }
             }
 
-            addChildren(1);
-            largestId += 1;
-
-            GPUBVH[] allNodes = new GPUBVH[largestId];
-            allNodes[0] = new GPUBVH(new Vector3(float.MaxValue), new Vector3(float.MinValue), 0, largestId);
-
+            GPUBVH[] allNodes = new GPUBVH[order.Count];
             List<uint> newIndices = new List<uint>();
-
-            foreach (KeyValuePair<int, BVH> node in positions)
+            for (int i = 0; i < order.Count; i++)
             {
-                int length = 0;
-                if(node.Value.isLeaf)
+                if (order[i].isLeaf)
                 {
-                    length = node.Value.triangleIndices.Length;
-                }
-                allNodes[node.Key] = new GPUBVH(node.Value.AABBMin, node.Value.AABBMax,
-                    newIndices.Count, newIndices.Count + length);
-                if (length > 0)
+                    allNodes[i] = new GPUBVH(order[i].AABBMin, order[i].AABBMax, newIndices.Count, newIndices.Count + order[i].triangleIndices.Length, 0, 0);
+                    newIndices.AddRange(order[i].triangleIndices);
+                } else
                 {
-                    newIndices.AddRange(node.Value.triangleIndices);
+                    allNodes[i] = new GPUBVH(order[i].AABBMin, order[i].AABBMax, 0, 0, nrToOrder[order[i].leftChild.nodeNumber], nrToOrder[order[i].rightChild.nodeNumber]);
+                }                 
+            }
+
+            void setParent(int idx, int parent)
+            {
+                allNodes[idx] = new GPUBVH(allNodes[idx], parent);
+            }
+
+            //Set parent numbers:
+            for (int i = 0; i < order.Count; i++)
+            {
+                if(!order[i].isLeaf)
+                {
+                    setParent(nrToOrder[order[i].leftChild.nodeNumber], i);
+                    setParent(nrToOrder[order[i].rightChild.nodeNumber], i);
                 }
             }
 
@@ -146,10 +153,9 @@ namespace P
             //gPUBVHs.Add(new GPUBVH(new Vector3(float.MinValue), new Vector3(float.MaxValue), 0, newIndices.Count));
 
             Console.WriteLine("All nodes: " + allNodes.Length);
-            Console.WriteLine("start 1, end 1: " + allNodes[1].indicesStart + ", " + allNodes[1].indicesEnd);
 
             GL.BindBuffer(BufferTarget.ShaderStorageBuffer, BVHBO);
-            GL.BufferData(BufferTarget.ShaderStorageBuffer, 8 * 4 * allNodes.Length, allNodes, BufferUsageHint.StaticDraw);
+            GL.BufferData(BufferTarget.ShaderStorageBuffer, 11 * 4 * allNodes.Length, allNodes.ToArray(), BufferUsageHint.StaticDraw);
             GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 7, BVHBO);
 
         }
@@ -199,7 +205,7 @@ namespace P
             GL.BindBuffer(BufferTarget.ShaderStorageBuffer, raySSBOs[currentInBuffer]);
             GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 1, raySSBOs[currentInBuffer]);
 
-            GL.DispatchCompute(width * samplesSqrt, height * samplesSqrt, 1);
+            GL.DispatchCompute(width * samplesSqrt / 32, height * samplesSqrt, 1);
             //GL.MemoryBarrier(MemoryBarrierFlags.ShaderStorageBarrierBit);
             //GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
             GL.Finish();
@@ -227,7 +233,7 @@ namespace P
                 GL.BufferSubData(BufferTarget.AtomicCounterBuffer, new IntPtr(sizeof(uint) * 3), sizeof(uint), new uint[] { 0 });
 
                 //Run the programs
-                GL.DispatchCompute(262144 / 64, 1, 1);
+                GL.DispatchCompute(8704 * 2, 1, 1);
                 //GL.MemoryBarrier(MemoryBarrierFlags.ShaderStorageBarrierBit);
                 //GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
                 GL.Finish();
@@ -306,7 +312,17 @@ namespace P
         public int indicesStart;
         public int indicesEnd;
 
-        public GPUBVH(Vector3 AABBMin, Vector3 AABBMax, int indicesStart, int indicesEnd)
+        public int parent;
+        public int leftChild;
+        public int rightChild;
+
+        public GPUBVH(GPUBVH parentless, int parent)
+        {
+            this = parentless;
+            this.parent = parent;
+        }
+
+        public GPUBVH(Vector3 AABBMin, Vector3 AABBMax, int indicesStart, int indicesEnd, int leftChild, int rightChild)
         {
             minX = AABBMin.X;
             minY = AABBMin.Y;
@@ -317,6 +333,10 @@ namespace P
 
             this.indicesStart = indicesStart;
             this.indicesEnd = indicesEnd;
+
+            this.parent = -1;
+            this.leftChild = leftChild;
+            this.rightChild = rightChild;
         }
     }
 }
