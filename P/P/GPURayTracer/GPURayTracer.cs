@@ -200,7 +200,6 @@ namespace P
             GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 1, raySSBOs[currentInBuffer]);
 
             GL.DispatchCompute(width * samplesSqrt, height * samplesSqrt, 1);
-            GL.DispatchCompute(width * samplesSqrt / 32, height * samplesSqrt, 1);
             //GL.MemoryBarrier(MemoryBarrierFlags.ShaderStorageBarrierBit);
             //GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
             GL.Finish();
