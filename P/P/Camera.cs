@@ -21,7 +21,7 @@ public static class Camera
     static float yaw = 90.0f;
 
     public static float _screenDist = 2f;
-    static Vector3 cameraPosition = new Vector3(0.0f, 3.0f, -12.0f);
+    static Vector3 cameraPosition = new Vector3(0.0f, 0.0f, -82.0f);
 
     static float cameraSpeed = 4.0f;
     static Vector3 cameraRight = new Vector3(1.0f, 0.0f, 0.0f);
