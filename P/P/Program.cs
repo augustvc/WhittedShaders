@@ -33,7 +33,7 @@ namespace P
 
         int VBO, VAO;
 
-        float[] vertices = {
+        float[] screenEdgeVertices = {
             -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
              1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
              1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
@@ -63,74 +63,28 @@ namespace P
 
             MeshLoader.Init();
             List<uint> indicesForBVH = new List<uint>();
+
+            //Remove first 3 entries
             for(int i = 3; i < MeshLoader.indices.Count; i++)
             {
                 indicesForBVH.Add(MeshLoader.indices[i]);
             }
-            TopLevelBVH topLevelBVH = new TopLevelBVH(MeshLoader.vertices, indicesForBVH.ToArray());
+
+            Mesh loadedObj = new Mesh(MeshLoader.vertices, indicesForBVH);
+            Mesh tree = MeshGenerator.TreeGenerator.GenerateTree();
+
+            Mesh usedMesh = loadedObj;
+
+            TopLevelBVH topLevelBVH = new TopLevelBVH(usedMesh.vertices, usedMesh.indices.ToArray());
             FourWayBVH topFourWayBVH = new FourWayBVH(topLevelBVH.TopBVH);
-            List<BVH> BVHStack = new List<BVH>();
-            BVHStack.Add(topLevelBVH.TopBVH);
-            List<FourWayBVH> FourWayStack = new List<FourWayBVH>();
-            FourWayStack.Add(topFourWayBVH);
-            int counterFW = 0;
-            int counterTW = 0;
 
-            while (BVHStack.Count > 0)
-            {
-                BVH bVH = BVHStack[BVHStack.Count-1] ;
-                BVHStack.RemoveAt(BVHStack.Count - 1);
-                if (bVH.isLeaf)
-                {
-                    
-                    //counterTW++;
-                    counterTW+=bVH.triangleIndices.Length;
-                }
-                else
-                {
-                    BVHStack.Add(bVH.leftChild);
-                    BVHStack.Add(bVH.rightChild);
-                    
-                }
-                
-                
-            }
-                Console.WriteLine("started");
-            while (FourWayStack.Count > 0)
-            {
-                FourWayBVH bVH = FourWayStack[FourWayStack.Count - 1];
-                FourWayStack.RemoveAt(FourWayStack.Count - 1);
-                if (bVH.isLeaf)
-                {
-                    
-                    //counterFW++;
-                    counterFW+=bVH.triangleIndices.Length;
-                }
-                else
-                {
-                    bVH.isLeafParent = true;
-
-                    for (int i = 0; i < 4; i++)
-                    {
-                        FourWayStack.Add(bVH.fourwayChildren[i]);
-
-                        bVH.isLeafParent &= bVH.fourwayChildren[i].isLeaf; 
-
-                    }
-
-                }
-                
-
-            }
-            Console.WriteLine("TTTTTTTTTTTTTTTTTTTTT{0}"+counterTW);
-            Console.WriteLine("FFFFFFFFFFFFFFFFFFFF{0}"+ counterFW);
             GL.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
             VAO = GL.GenVertexArray();
             GL.BindVertexArray(VAO);
 
             VBO = GL.GenBuffer();
             GL.BindBuffer(BufferTarget.ArrayBuffer, VBO);
-            GL.BufferData(BufferTarget.ArrayBuffer, vertices.Length * sizeof(float), vertices, BufferUsageHint.StaticDraw);
+            GL.BufferData(BufferTarget.ArrayBuffer, screenEdgeVertices.Length * sizeof(float), screenEdgeVertices, BufferUsageHint.StaticDraw);
 
             GL.EnableVertexAttribArray(0);
             GL.EnableVertexAttribArray(1);
@@ -142,7 +96,7 @@ namespace P
 
             rayTracer = new RayTracer(topLevelBVH,topFourWayBVH);
             gpuRayTracer = new GPURayTracer();
-            gpuRayTracer.SetupTriangleBuffers(MeshLoader.vertices, MeshLoader.indices, topLevelBVH);
+            gpuRayTracer.SetupTriangleBuffers(usedMesh.vertices, usedMesh.indices, topLevelBVH);
 
             base.OnLoad(e);
         }

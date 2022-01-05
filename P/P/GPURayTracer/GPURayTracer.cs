@@ -211,7 +211,7 @@ namespace P
             GL.Finish();
 
 
-            int maximumBounces = 2;
+            int maximumBounces = 1;
             for (int i = 0; i < maximumBounces; i++)
             {
                 //Reset the shadow ray counter
@@ -232,11 +232,15 @@ namespace P
                 //Reset the intersection job and shadow ray job counters
                 GL.BufferSubData(BufferTarget.AtomicCounterBuffer, new IntPtr(sizeof(uint) * 3), sizeof(uint), new uint[] { 0 });
 
+                Stopwatch sw = new Stopwatch();
+                sw.Start();
                 //Run the programs
-                GL.DispatchCompute(8704 * 2, 1, 1);
+                GL.DispatchCompute(8704 * 4 / 32, 1, 1);
                 //GL.MemoryBarrier(MemoryBarrierFlags.ShaderStorageBarrierBit);
                 //GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
                 GL.Finish();
+                sw.Stop();
+                //Console.WriteLine("Frame time: " + sw.ElapsedMilliseconds);
 
                 GL.UseProgram(bounceProgram);
                 GL.DispatchCompute(262144 / 64, 1, 1);
