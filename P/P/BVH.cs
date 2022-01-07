@@ -189,7 +189,10 @@ namespace P
 
             if (SAHLeft + SAHRight  >= bvh.SAH)
             {
-                return;
+                if (bvh.triangleIndices.Length < 24)
+                {
+                    return;
+                }
             }
             SAHLeft *= ((float)leftPrims - constantCost) / leftPrims;
             SAHRight *= ((float)rightPrims - constantCost) / rightPrims;
