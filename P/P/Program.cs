@@ -54,11 +54,11 @@ namespace P
 
         protected override void OnLoad(EventArgs e)
         {
-            timer.Elapsed += MouseUpdate;
-            timer.AutoReset = true;
-            timer.Enabled = true;
+            //timer.Elapsed += MouseUpdate;
+            //timer.AutoReset = true;
+            //timer.Enabled = true;
 
-            TargetUpdateFrequency = 60.0;
+            //TargetUpdateFrequency = 60.0;
             Console.WriteLine("update period: " + this.UpdatePeriod);
             Console.WriteLine("update freq: " + this.UpdateFrequency);
 
@@ -179,7 +179,7 @@ namespace P
         bool newYPress = true;
         protected override void OnUpdateFrame(FrameEventArgs e)
         {
-
+            Camera.OnMouseMove(this);
             //Keyboard Movement
 
             KeyboardState ks = Keyboard.GetState();

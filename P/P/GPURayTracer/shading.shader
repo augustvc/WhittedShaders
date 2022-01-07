@@ -28,6 +28,7 @@ void main() {
 		if (ray.bvhDebug > 255.0) {
 			debugVal2 = (ray.bvhDebug - 255.0) / 255.0;
 		}
+
 		vec4 pixel = vec4(debugVal, ray.energy.y, 0.0, debugVal2);
 		if(ray.primID == -2) {
 			pixel = vec4(debugVal, 0.0, debugVal2, 1.0);
