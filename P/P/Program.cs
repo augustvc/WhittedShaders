@@ -27,7 +27,7 @@ namespace P
             }
             using (Game game = new Game(1920, 1000, title))
             {
-                game.Run(60.0, 0.0);
+                game.Run(0.0, 0.0);
             }
         }
 
@@ -44,20 +44,8 @@ namespace P
         RayTracer rayTracer;
         GPURayTracer gpuRayTracer;
 
-        System.Timers.Timer timer = new System.Timers.Timer(4);
-
-        private void MouseUpdate(Object source, ElapsedEventArgs e)
-        {
-            Camera.OnMouseMove(this);
-        }
-
         protected override void OnLoad(EventArgs e)
         {
-            timer.Elapsed += MouseUpdate;
-            timer.AutoReset = true;
-            timer.Enabled = true;
-
-            TargetUpdateFrequency = 60.0;
             Console.WriteLine("update period: " + this.UpdatePeriod);
             Console.WriteLine("update freq: " + this.UpdateFrequency);
 
@@ -103,7 +91,6 @@ namespace P
 
         protected override void OnUnload(EventArgs e)
         {
-            timer.Stop();
             GL.BindBuffer(BufferTarget.ArrayBuffer, 0);
             GL.DeleteBuffer(VBO);
             shader.Dispose();
@@ -178,7 +165,7 @@ namespace P
         bool newYPress = true;
         protected override void OnUpdateFrame(FrameEventArgs e)
         {
-
+            Camera.OnMouseMove(this);
             //Keyboard Movement
 
             KeyboardState ks = Keyboard.GetState();
