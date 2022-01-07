@@ -20,9 +20,20 @@ void main() {
 
 		iter++;
 		//intersect(ray);
-		vec4 pixel = vec4(ray.energy, 1.0);
+		float debugVal = ray.bvhDebug;
+		if (debugVal > 0f) {
+			debugVal = debugVal / 255.0;
+		}
+		float debugVal2 = 0f;
+		if (ray.bvhDebug > 255.0) {
+			debugVal2 = (ray.bvhDebug - 255.0) / 255.0;
+		}
+		vec4 pixel = vec4(debugVal, ray.energy.y, 0.0, debugVal2);
+		if(ray.primID == -2) {
+			pixel = vec4(debugVal, 0.0, debugVal2, 1.0);
+		}
 		if (ray.primID >= 0) {
-			pixel = vec4(ray.ambient, 1.0);
+			//pixel = vec4(ray.ambient, 1.0);
 		}
 
 		ivec2 pixel_coords = ivec2(ray.pixelX, ray.pixelY);

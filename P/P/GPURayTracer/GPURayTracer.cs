@@ -235,12 +235,15 @@ namespace P
                 Stopwatch sw = new Stopwatch();
                 sw.Start();
                 //Run the programs
-                GL.DispatchCompute(8704 * 4 / 32, 1, 1);
+                GL.DispatchCompute(width * height / 64, 1, 1);
                 //GL.MemoryBarrier(MemoryBarrierFlags.ShaderStorageBarrierBit);
                 //GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
                 GL.Finish();
                 sw.Stop();
-                //Console.WriteLine("Frame time: " + sw.ElapsedMilliseconds);
+                if (sw.ElapsedMilliseconds > 300)
+                {
+                    Console.WriteLine("Frame time: " + sw.ElapsedMilliseconds);
+                }
 
                 GL.UseProgram(bounceProgram);
                 GL.DispatchCompute(262144 / 64, 1, 1);
@@ -304,14 +307,11 @@ namespace P
         }
     }
 
-    struct GPUBVH
+    //[StructLayout(LayoutKind.Sequential)]
+    unsafe struct GPUBVH
     {
-        public float minX;
-        public float minY;
-        public float minZ;
-        public float maxX;
-        public float maxY;
-        public float maxZ;
+        //[MarshalAs(UnmanagedType.ByValArray)]
+        public fixed float AABB[6];
 
         public int indicesStart;
         public int indicesEnd;
@@ -328,12 +328,12 @@ namespace P
 
         public GPUBVH(Vector3 AABBMin, Vector3 AABBMax, int indicesStart, int indicesEnd, int leftChild, int rightChild)
         {
-            minX = AABBMin.X;
-            minY = AABBMin.Y;
-            minZ = AABBMin.Z;
-            maxX = AABBMax.X;
-            maxY = AABBMax.Y;
-            maxZ = AABBMax.Z;
+            AABB[0] = AABBMin.X;
+            AABB[1] = AABBMin.Y;
+            AABB[2] = AABBMin.Z;
+            AABB[3] = AABBMax.X;
+            AABB[4] = AABBMax.Y;
+            AABB[5] = AABBMax.Z;
 
             this.indicesStart = indicesStart;
             this.indicesEnd = indicesEnd;

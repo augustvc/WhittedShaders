@@ -1,4 +1,4 @@
-﻿layout(local_size_x = 32, local_size_y = 1) in;
+﻿layout(local_size_x = 64, local_size_y = 1) in;
 
 struct Ray
 {
@@ -11,6 +11,7 @@ struct Ray
 	uint pixelY;
 	vec3 ambient;
 	int primID;
+	int bvhDebug;
 };
 
 layout(std430, binding = 1) buffer rayInBuffer
@@ -47,12 +48,7 @@ layout(binding = 4, offset = 12) uniform atomic_uint intersectionJob;
 
 struct BVH
 {
-	float minX;
-	float minY;
-	float minZ;
-	float maxX;
-	float maxY;
-	float maxZ;
+	float AABB[6];
 
 	int indicesStart;
 	int indicesEnd;
@@ -76,8 +72,8 @@ float rayAABB(int location) {
 	int signY = ray.dir.y > 0f ? 1 : 0;
 	int signZ = ray.dir.z > 0f ? 1 : 0;
 
-	vec3[2] bounds = { vec3(bvhs[location].maxX, bvhs[location].maxY, bvhs[location].maxZ),
-		vec3(bvhs[location].minX, bvhs[location].minY, bvhs[location].minZ) };
+	vec3[2] bounds = { vec3(bvhs[location].AABB[3], bvhs[location].AABB[4], bvhs[location].AABB[5]),
+		vec3(bvhs[location].AABB[0], bvhs[location].AABB[1], bvhs[location].AABB[2]) };
 
 	float tmin = (bounds[signX].x - ray.origin.x) * ray.invdir.x;
 	float tmax = (bounds[1 - signX].x - ray.origin.x) * ray.invdir.x;
@@ -104,9 +100,9 @@ float rayAABB(int location) {
 	return tmin;
 }
 
-void doTris(int location) {
-	int i = bvhs[location].indicesStart;
-	while (i <= bvhs[location].indicesEnd) {
+void doTris(int start, int end) {
+	int i = start;
+	while (i <= end) {
 		uint triAI = indexBuffer[i++];
 		uint triBI = indexBuffer[i++];
 		uint triCI = indexBuffer[i++];
@@ -147,87 +143,48 @@ void doTris(int location) {
 	}
 }
 
-void main() {
-	int bvhLocation = 0;
-	int previousLocation = -1;
-	bool rayOutdated = false;
-	uint inRays = atomicCounter(rayCountIn);
+//Dragon bvh nodes: 39053
 
+void main() {
 	rayNum = atomicCounterIncrement(intersectionJob);
 	ray = rays[rayNum];
 
-	while (true) {		
-		if (rayOutdated) {
-			rays[rayNum] = ray;
-			rayNum = atomicCounterIncrement(intersectionJob);
-			if (rayNum >= inRays) {
-				break;
-			}
-			ray = rays[rayNum];
-			bvhLocation = 0;
-			previousLocation = -1;
-			rayOutdated = false;
-		}
+	int stack[20];
+	int stackCount = 1;
+	stack[0] = 0;
+	int loc = 0;
+	ray.bvhDebug = 0;
+	while (stackCount > 0) {
+		ray.bvhDebug++;
+		stackCount--;
+		loc = stack[stackCount];
+		if (bvhs[loc].indicesStart != bvhs[loc].indicesEnd) {
+			doTris(bvhs[loc].indicesStart, bvhs[loc].indicesEnd);
+		} else {
+			int left = bvhs[loc].leftChild;
+			float leftDist = rayAABB(left);
+			int right = bvhs[loc].rightChild;
+			float rightDist = rayAABB(bvhs[loc].rightChild);
 
-		while (true) {
-			if (bvhs[bvhLocation].indicesStart != bvhs[bvhLocation].indicesEnd) {
-				//Make sure we're not in a leaf
-				previousLocation = bvhLocation;
-				bvhLocation = bvhs[bvhLocation].parent;
-			}
-			
-			int near = bvhs[bvhLocation].leftChild;
-			int far = bvhs[bvhLocation].rightChild;
-			float nearDist = rayAABB(near);
-			float farDist = rayAABB(far);
-
-			if (nearDist > farDist) {
-				int tempi = far;
-				far = near;
-				near = tempi;
-
-				float tempf = farDist;
-				farDist = nearDist;
-				nearDist = tempf;
+			if (rightDist < leftDist) {
+				int tempI = left;
+				left = right;
+				right = tempI;
+				float tempF = leftDist;
+				leftDist = rightDist;
+				rightDist = tempF;
 			}
 
-			if (previousLocation == far) {
-				if (bvhLocation == 0) {
-					rayOutdated = true;
-					break;
-				}
-				previousLocation = bvhLocation;
-				bvhLocation = bvhs[bvhLocation].parent;
-			} else {
-				int nextChild = near;
-				float nextDist = nearDist;
-
-				if (previousLocation == near) {
-					nextChild = far;
-					nextDist = farDist;
-				}
-
-				if(nextDist >= 0f && nextDist < ray.t) {
-					//Traverse the node
-					previousLocation = bvhLocation;
-					bvhLocation = nextChild;
-				}
-				else {
-					//Don't traverse this node, act like we came from it
-					previousLocation = nextChild;
-				}
+			if(rightDist >= 0f && rightDist < ray.t) {
+				stack[stackCount] = right;
+				stackCount++;
 			}
-
-			if (bvhs[bvhLocation].indicesStart != bvhs[bvhLocation].indicesEnd) {
-				//Found a leaf to check out. We're done
-				break;
+			if(leftDist >= 0f && leftDist < ray.t) {
+				stack[stackCount] = left;
+				stackCount++;
 			}
 		}
-
-		if (rayOutdated) {
-			continue;
-		}
-
-		doTris(bvhLocation);
 	}
+
+	rays[rayNum] = ray;
 }

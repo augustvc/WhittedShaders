@@ -9,6 +9,7 @@
 	uint pixelY;
 	vec3 ambient;
 	int primID;
+	int bvhDebug;
 };
 
 layout(std430, binding = 1) buffer rayInBuffer

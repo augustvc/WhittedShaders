@@ -11,6 +11,7 @@ struct Ray
 	uint pixelY;
 	vec3 ambient;
 	int primID;
+	int bvhDebug;
 };
 
 layout(std430, binding = 1) buffer rayInBuffer
@@ -111,6 +112,15 @@ void main() {
 		int primID = rays[rayNum].primID;
 
 		if (primID < 0) {
+			shadowRays[atomicCounterIncrement(shadowRayCount)] = Ray(
+				rays[rayNum].origin,
+				rays[rayNum].dir,
+				vec3(0.0, 1.0, 0.0),
+				vec3(0.0),
+				100000, rays[rayNum].pixelX, rays[rayNum].pixelY,
+				vec3(0.0),
+				-2,
+				rays[rayNum].bvhDebug);
 			continue;
 		}
 
@@ -155,7 +165,8 @@ void main() {
 				rays[rayNum].energy * mat.specular,
 				100000, rays[rayNum].pixelX, rays[rayNum].pixelY,
 				vec3(0.0),
-				-1);
+				-1,
+				rays[rayNum].bvhDebug);
 		}
 
 		if (mat.diffuse > 0.0) {
@@ -177,8 +188,21 @@ void main() {
 				diffuseEnergy * rays[rayNum].energy,
 				length(lightPosition - srOrigin), rays[rayNum].pixelX, rays[rayNum].pixelY,
 				mat.color * mat.diffuse * 0.05,
-				-1);
+				-1,
+				rays[rayNum].bvhDebug);
 			shadowRays[atomicCounterIncrement(shadowRayCount)] = shadowRay;
+		}
+		else {
+			shadowRays[atomicCounterIncrement(shadowRayCount)] = Ray(
+				rays[rayNum].origin,
+				rays[rayNum].dir,
+				vec3(0.0, 1.0, 0.0),
+				vec3(0.0),
+				100000, rays[rayNum].pixelX, rays[rayNum].pixelY,
+				vec3(0.0),
+				-2,
+				rays[rayNum].bvhDebug);
+			continue;
 		}
 	}
 }

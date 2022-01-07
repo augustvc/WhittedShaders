@@ -27,7 +27,8 @@ namespace P
             }
             using (Game game = new Game(1920, 1000, title))
             {
-                game.Run(60.0, 0.0);
+                game.VSync = VSyncMode.Off;
+                game.Run(0.0, 0.0);
             }
         }
 
