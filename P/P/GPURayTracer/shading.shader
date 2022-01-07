@@ -22,14 +22,18 @@ void main() {
 		//intersect(ray);
 		float debugVal = ray.bvhDebug;
 		if (debugVal > 0f) {
-			debugVal = debugVal / 255.0;
+			debugVal = 0f;// debugVal / 255.0;
 		}
 		float debugVal2 = 0f;
-		if (ray.bvhDebug > 255.0) {
-			debugVal2 = (ray.bvhDebug - 255.0) / 255.0;
+		if (ray.bvhDebug > 6) {
+			//debugVal2 = 1.0f;
+		}
+		if (ray.bvhDebug > 15) {
+			//debugVal = 1.0f;
+			debugVal2 = 0f;
 		}
 
-		vec4 pixel = vec4(debugVal, ray.energy.y, 0.0, debugVal2);
+		vec4 pixel = vec4(debugVal, ray.energy.y, debugVal2, 1.0);
 		if(ray.primID == -2) {
 			pixel = vec4(debugVal, 0.0, debugVal2, 1.0);
 		}

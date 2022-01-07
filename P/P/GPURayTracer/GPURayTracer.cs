@@ -235,7 +235,7 @@ namespace P
                 Stopwatch sw = new Stopwatch();
                 sw.Start();
                 //Run the programs
-                GL.DispatchCompute(width * height / 64, 1, 1);
+                GL.DispatchCompute(8704 * 4 / 64, 1, 1);
                 //GL.MemoryBarrier(MemoryBarrierFlags.ShaderStorageBarrierBit);
                 //GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
                 GL.Finish();
