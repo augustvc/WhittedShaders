@@ -11,3 +11,6 @@ while-while loop organization here because the new rays tend to
 visit many nodes before they find first primitives to intersect. Better SIMD efficiency and performance can be obtained by limiting
 the while loops to max N iterations, we used N = 4.
 
+
+
+Use shared memory for dynamically indexed arrays, where local memory sucks.
