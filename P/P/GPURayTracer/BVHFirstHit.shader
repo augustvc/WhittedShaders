@@ -48,14 +48,13 @@ layout(binding = 4, offset = 12) uniform atomic_uint intersectionJob;
 
 struct BVH
 {
-	float AABB[6];
+	float AABBs[12];
 
-	int indicesStart;
-	int indicesEnd;
+	int leftOrStart;
+	int leftOrEnd;
 
-	int parent;
-	int leftChild;
-	int rightChild;
+	int rightOrStart;
+	int rightOrEnd;
 };
 
 layout(std430, binding = 7) buffer BVHBuffer
@@ -66,27 +65,25 @@ layout(std430, binding = 7) buffer BVHBuffer
 Ray ray;
 uint rayNum = 4000000000;
 
-float rayAABB(int location) {
+float rayAABB(float maxX, float maxY, float maxZ, float minX, float minY, float minZ) {
 	// Ray-AABB intersection code inspired by https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-box-intersection
-	int signX = ray.dir.x > 0f ? 1 : 0;
-	int signY = ray.dir.y > 0f ? 1 : 0;
-	int signZ = ray.dir.z > 0f ? 1 : 0;
+	//float tmin = (bounds[signX].x - ray.origin.x) * ray.invdir.x;
+	//float tmax = (bounds[1 - signX].x - ray.origin.x) * ray.invdir.x;
+	//float tymin = (bounds[signY].y - ray.origin.y) * ray.invdir.y;
+	//float tymax = (bounds[1 - signY].y - ray.origin.y) * ray.invdir.y;
 
-	vec3[2] bounds = { vec3(bvhs[location].AABB[3], bvhs[location].AABB[4], bvhs[location].AABB[5]),
-		vec3(bvhs[location].AABB[0], bvhs[location].AABB[1], bvhs[location].AABB[2]) };
-
-	float tmin = (bounds[signX].x - ray.origin.x) * ray.invdir.x;
-	float tmax = (bounds[1 - signX].x - ray.origin.x) * ray.invdir.x;
-	float tymin = (bounds[signY].y - ray.origin.y) * ray.invdir.y;
-	float tymax = (bounds[1 - signY].y - ray.origin.y) * ray.invdir.y;
+	float tmin = (minX - ray.origin.x) * ray.invdir.x;
+	float tmax = (maxX - ray.origin.x) * ray.invdir.x;
+	float tymin = (minY - ray.origin.y) * ray.invdir.y;
+	float tymax = (maxY - ray.origin.y) * ray.invdir.y;
 
 	if ((tmin > tymax) || (tymin > tmax))
 		tmin = 1. / 0.;
 	tmin = max(tymin, tmin);
 	tmax = min(tmax, tymax);
 
-	float tzmin = (bounds[signZ].z - ray.origin.z) * ray.invdir.z;
-	float tzmax = (bounds[1 - signZ].z - ray.origin.z) * ray.invdir.z;
+	float tzmin = (minZ - ray.origin.z) * ray.invdir.z;
+	float tzmax = (maxZ - ray.origin.z) * ray.invdir.z;
 
 	if ((tmin > tzmax) || (tzmin > tmax))
 		tmin = 1. / 0.;
@@ -145,147 +142,6 @@ void doTris(int start, int end) {
 
 //Dragon bvh nodes: 39053
 
-struct Stack
-{
-	int nodes[20];
-};
-
-struct StupidStack
-{
-	int zero;
-	int one;
-	int two;
-	int three;
-	int four;
-	int five;
-	int six;
-	int seven;
-	int eight;
-	int nine;
-	int ten;
-	int eleven;
-	int twelve;
-	int thirteen;
-	int fourteen;
-	int fifteen;
-	int sixteen;
-	int seventeen;
-	int eighteen;
-	int nineteen;
-};
-
-StupidStack stupidStack;
-
-int getStack(int idx) {
-	switch (idx) {
-		case 0:
-			return stupidStack.zero;
-		case 1:
-			return stupidStack.one;
-		case 2:
-			return stupidStack.two;
-		case 3:
-			return stupidStack.three;
-		case 4:
-			return stupidStack.four;
-		case 5:
-			return stupidStack.five;
-		case 6:
-			return stupidStack.six;
-		case 7:
-			return stupidStack.seven;
-		case 8:
-			return stupidStack.eight;
-		case 9:
-			return stupidStack.nine;
-		case 10:
-			return stupidStack.ten;
-		case 11:
-			return stupidStack.eleven;
-		case 12:
-			return stupidStack.twelve;
-		case 13:
-			return stupidStack.thirteen;
-		case 14:
-			return stupidStack.fourteen;
-		case 15:
-			return stupidStack.fifteen;
-		case 16:
-			return stupidStack.sixteen;
-		case 17:
-			return stupidStack.seventeen;
-		case 18:
-			return stupidStack.eighteen;
-		case 19:
-			return stupidStack.nineteen;
-	}
-}
-
-void setStack(int idx, int value) {
-	switch (idx) {
-	case 0:
-		stupidStack.zero = value;
-		return;
-	case 1:
-		stupidStack.one = value;
-		return;
-	case 2:
-		stupidStack.two = value;
-		return;
-	case 3:
-		stupidStack.three = value;
-		return;
-	case 4:
-		stupidStack.four = value;
-		return;
-	case 5:
-		stupidStack.five = value;
-		return;
-	case 6:
-		stupidStack.six = value;
-		return;
-	case 7:
-		stupidStack.seven = value;
-		return;
-	case 8:
-		stupidStack.eight = value;
-		return;
-	case 9:
-		stupidStack.nine = value;
-		return;
-	case 10:
-		stupidStack.ten = value;
-		return;
-	case 11:
-		stupidStack.eleven = value;
-		return;
-	case 12:
-		stupidStack.twelve = value;
-		return;
-	case 13:
-		stupidStack.thirteen = value;
-		return;
-	case 14:
-		stupidStack.fourteen = value;
-		return;
-	case 15:
-		stupidStack.fifteen = value;
-		return;
-	case 16:
-		stupidStack.sixteen = value;
-		return;
-	case 17:
-		stupidStack.seventeen = value;
-		return;
-	case 18:
-		stupidStack.eighteen = value;
-		return;
-	case 19:
-		stupidStack.nineteen = value;
-		return;
-	}
-}
-
 int stackCount;
 shared int stack[20 * 64];
 
@@ -295,13 +151,20 @@ void main() {
 	rayNum = atomicCounterIncrement(intersectionJob);
 	uint stackOffset = gl_LocalInvocationIndex * 20;
 
+
 	uint maxRays = atomicCounter(rayCountIn);
 	while (rayNum < maxRays) {
 		ray = rays[rayNum];
 
-		setStack(0, 0);
 		stack[stackOffset] = 0;
 		stackCount = 1;
+		
+		int lowX = ray.dir.x > 0f ? 3 : 0;
+		int lowY = ray.dir.y > 0f ? 4 : 1;
+		int lowZ = ray.dir.z > 0f ? 5 : 2;
+		int highX = ray.dir.x > 0f ? 0 : 3;
+		int highY = ray.dir.y > 0f ? 1 : 4;
+		int highZ = ray.dir.z > 0f ? 2 : 5;
 
 		int loc = 0;
 		ray.bvhDebug = 0;
@@ -310,30 +173,42 @@ void main() {
 				ray.bvhDebug = stackCount;
 			stackCount--;
 			loc = stack[stackOffset + stackCount];
-			if (bvhs[loc].indicesStart != bvhs[loc].indicesEnd) {
-				doTris(bvhs[loc].indicesStart, bvhs[loc].indicesEnd);
+
+			float leftDist = rayAABB(bvhs[loc].AABBs[lowX], bvhs[loc].AABBs[lowY], bvhs[loc].AABBs[lowZ], bvhs[loc].AABBs[highX], bvhs[loc].AABBs[highY], bvhs[loc].AABBs[highZ]);
+			float rightDist = rayAABB(bvhs[loc].AABBs[lowX + 6], bvhs[loc].AABBs[lowY + 6], bvhs[loc].AABBs[lowZ + 6], bvhs[loc].AABBs[highX + 6], bvhs[loc].AABBs[highY + 6], bvhs[loc].AABBs[highZ + 6]);
+
+			BVH bvh = bvhs[loc];
+
+			if (leftDist > rightDist) {
+				int tempI = bvh.leftOrStart;
+				bvh.leftOrStart = bvh.rightOrStart;
+				bvh.rightOrStart = tempI;
+
+				tempI = bvh.leftOrEnd;
+				bvh.leftOrEnd = bvh.rightOrEnd;
+				bvh.rightOrEnd = tempI;
+
+				float tempF = leftDist;
+				leftDist = rightDist;
+				rightDist = tempF;
 			}
-			else {
-				int left = bvhs[loc].leftChild;
-				float leftDist = rayAABB(left);
-				int right = bvhs[loc].rightChild;
-				float rightDist = rayAABB(bvhs[loc].rightChild);
 
-				if (rightDist < leftDist) {
-					int tempI = left;
-					left = right;
-					right = tempI;
-					float tempF = leftDist;
-					leftDist = rightDist;
-					rightDist = tempF;
+			//Add left later, so it will get popped first.
+			if (rightDist >= 0f && rightDist < ray.t) {
+				if (bvh.rightOrStart != bvh.rightOrEnd) {
+					doTris(bvh.rightOrStart, bvh.rightOrEnd);
 				}
-
-				if (rightDist >= 0f && rightDist < ray.t) {
-					stack[stackOffset + stackCount] = right;
-					stackCount++;
+				else {	
+					stack[stackOffset + stackCount] = bvh.rightOrStart;
+					stackCount++;				
 				}
-				if (leftDist >= 0f && leftDist < ray.t) {
-					stack[stackOffset + stackCount] = left;
+			}
+			if (leftDist >= 0f && leftDist < ray.t) {
+				if (bvh.leftOrStart != bvh.leftOrEnd) {
+					doTris(bvh.leftOrStart, bvh.leftOrEnd);
+				}
+				else {
+					stack[stackOffset + stackCount] = bvh.leftOrStart;
 					stackCount++;
 				}
 			}

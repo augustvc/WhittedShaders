@@ -67,10 +67,10 @@ namespace P
 
         void RecursiveSplit(BVH bvh)
         {
-            if(bvh.triangleIndices.Length < 8000)
+            if(bvh.triangleIndices.Length < 500)
             {
                 //Console.WriteLine("Making too small bvh for testing purposes (remove later)");
-               // return;
+                //return;
             }
 
             int binCount = 8;
