@@ -166,6 +166,9 @@ namespace P
             }
         }
 
+        static public double totalPrimaryRayFirstHitTime = 0.0;
+        static public double totalGenRayTime= 0.0;
+        static public int totalFrames = 0;
         public void GenTex(int width, int height)
         {
             if (width != this.width || height != this.height)
@@ -194,11 +197,16 @@ namespace P
             GL.BindBuffer(BufferTarget.ShaderStorageBuffer, raySSBOs[currentInBuffer]);
             GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 1, raySSBOs[currentInBuffer]);
 
-            GL.DispatchCompute(width * samplesSqrt / 32, height * samplesSqrt, 1);
+            Stopwatch genSW = new Stopwatch();
+            genSW.Start();
+            GL.DispatchCompute((width * samplesSqrt) / 32, (height * samplesSqrt), 1);
             //GL.MemoryBarrier(MemoryBarrierFlags.ShaderStorageBarrierBit);
             //GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
             GL.Finish();
-
+            genSW.Stop();
+            totalGenRayTime += genSW.Elapsed.TotalMilliseconds;
+            totalFrames++;
+            //Console.WriteLine("Generating rays took " + genSW.ElapsedMilliseconds + " ms");
 
             int maximumBounces = 1;
             for (int i = 0; i < maximumBounces; i++)
@@ -229,11 +237,16 @@ namespace P
                 //GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
                 GL.Finish();
                 sw.Stop();
+                if (i == 0)
+                {
+                    totalPrimaryRayFirstHitTime += sw.Elapsed.TotalMilliseconds;
+                }
                 if (sw.ElapsedMilliseconds > 300)
                 {
-                    Console.WriteLine("Frame time: " + sw.ElapsedMilliseconds);
                 }
+                //Console.WriteLine("Frame time: " + sw.Elapsed);
 
+                sw.Restart();
                 GL.UseProgram(bounceProgram);
                 GL.DispatchCompute(262144 / 64, 1, 1);
                 GL.Finish();
@@ -253,6 +266,8 @@ namespace P
                     new IntPtr(sizeof(uint) * 3), new IntPtr(sizeof(uint)), sizeof(uint));
 
                 currentInBuffer = 1 - currentInBuffer;
+                sw.Stop();
+                //Console.WriteLine("Finishing up time: " + sw.Elapsed);
             }
         }
 
