@@ -14,7 +14,7 @@ namespace P
     class GPURayTracer
     {
         int generateProgram;
-        int firstHitProgram;
+        int bvhIntersectionProgram;
         int bounceProgram;
         int shadingProgram;
         int[] raySSBOs = { -1, -1 };
@@ -31,16 +31,16 @@ namespace P
         public GPURayTracer ()
         {
             generateProgram = Shader.CreateComputeShaderProgram("#version 460", new string[] { "GPURayTracer/generate.shader" });
-            firstHitProgram = Shader.CreateComputeShaderProgram("#version 430", new string[] { "GPURayTracer/BVHFirstHit.shader" });
+            bvhIntersectionProgram = Shader.CreateComputeShaderProgram("#version 430", new string[] { "GPURayTracer/BVHIntersect.shader" });
             bounceProgram = Shader.CreateComputeShaderProgram("#version 430", new string[] { "GPURayTracer/bouncer.shader" });
-            shadingProgram = Shader.CreateComputeShaderProgram("#version 430", new string[] { "GPURayTracer/BVHIntersect.shader", "GPURayTracer/shading.shader" });
+            shadingProgram = Shader.CreateComputeShaderProgram("#version 430", new string[] { "GPURayTracer/shading.shader" });
 
             SetupRayBuffers(width, height);
         }
 
         void SetupRayBuffers(int width, int height)
         {
-            GL.UseProgram(firstHitProgram);
+            GL.UseProgram(bvhIntersectionProgram);
 
             for (int i = 0; i < 2; i++)
             {
@@ -81,7 +81,7 @@ namespace P
 
         public void SetupTriangleBuffers(float[] vertices, List<uint> indices, TopLevelBVH topLevelBVH)
         {
-            GL.UseProgram(firstHitProgram);
+            GL.UseProgram(bvhIntersectionProgram);
             if (vertexBO == -1) vertexBO = GL.GenBuffer();
             if (BVHBO == -1) BVHBO = GL.GenBuffer();
 
@@ -160,12 +160,13 @@ namespace P
                 GL.BufferData(BufferTarget.AtomicCounterBuffer, sizeof(uint) * 4, test, BufferUsageHint.StaticDraw);
                 GL.BindBufferBase(BufferRangeTarget.AtomicCounterBuffer, 4, rayCounterBO);
                 
-                GL.UseProgram(firstHitProgram);
+                GL.UseProgram(bvhIntersectionProgram);
                 GL.BindBuffer(BufferTarget.AtomicCounterBuffer, rayCounterBO);
                 GL.BindBufferBase(BufferRangeTarget.AtomicCounterBuffer, 4, rayCounterBO);
             }
         }
 
+        static public double totalShadowRayTime = 0.0;
         static public double totalPrimaryRayFirstHitTime = 0.0;
         static public double totalGenRayTime= 0.0;
         static public int totalFrames = 0;
@@ -217,7 +218,7 @@ namespace P
                 GL.BufferSubData(BufferTarget.AtomicCounterBuffer, new IntPtr(sizeof(uint) * 2), sizeof(uint), new uint[] { 0 });
 
                 //Swap the in-ray buffer with the out-ray buffer:
-                GL.UseProgram(firstHitProgram);
+                GL.UseProgram(bvhIntersectionProgram);
                 GL.BindBuffer(BufferTarget.ShaderStorageBuffer, raySSBOs[currentInBuffer]);
                 GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 1, raySSBOs[currentInBuffer]);
 
@@ -226,35 +227,38 @@ namespace P
 
                 //Reset the counter for the output buffer, so we can start filling it from 0:
                 GL.BufferSubData(BufferTarget.AtomicCounterBuffer, new IntPtr(sizeof(uint)), sizeof(uint), new uint[] { 0 });
-                //Reset the intersection job and shadow ray job counters
+                //Reset the intersection job counter
                 GL.BufferSubData(BufferTarget.AtomicCounterBuffer, new IntPtr(sizeof(uint) * 3), sizeof(uint), new uint[] { 0 });
 
                 Stopwatch sw = new Stopwatch();
                 sw.Start();
                 //Run the programs
+                GL.Uniform1(1, 0);
                 GL.DispatchCompute(8704 * 4 / 64, 1, 1);
-                //GL.MemoryBarrier(MemoryBarrierFlags.ShaderStorageBarrierBit);
-                //GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
                 GL.Finish();
                 sw.Stop();
                 if (i == 0)
                 {
                     totalPrimaryRayFirstHitTime += sw.Elapsed.TotalMilliseconds;
                 }
-                if (sw.ElapsedMilliseconds > 300)
-                {
-                }
-                //Console.WriteLine("Frame time: " + sw.Elapsed);
 
-                sw.Restart();
                 GL.UseProgram(bounceProgram);
                 GL.DispatchCompute(262144 / 64, 1, 1);
                 GL.Finish();
 
+                sw.Restart();
+                GL.UseProgram(bvhIntersectionProgram);
+                //Reset the intersection job counter
+                GL.BufferSubData(BufferTarget.AtomicCounterBuffer, new IntPtr(sizeof(uint) * 3), sizeof(uint), new uint[] { 0 });
+                GL.Uniform1(1, 1);
+                GL.DispatchCompute(8704 * 4 / 64, 1, 1);
+                GL.Finish();
+                sw.Stop();
+                totalShadowRayTime += sw.Elapsed.TotalMilliseconds;
+
+
                 GL.UseProgram(shadingProgram);
                 GL.DispatchCompute(262144 / 64, 1, 1);
-                //GL.MemoryBarrier(MemoryBarrierFlags.ShaderStorageBarrierBit);
-                //GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
                 GL.Finish();
 
                 //Swap counters
@@ -266,7 +270,6 @@ namespace P
                     new IntPtr(sizeof(uint) * 3), new IntPtr(sizeof(uint)), sizeof(uint));
 
                 currentInBuffer = 1 - currentInBuffer;
-                sw.Stop();
                 //Console.WriteLine("Finishing up time: " + sw.Elapsed);
             }
         }
@@ -278,7 +281,7 @@ namespace P
             if (!disposedValue)
             {
                 GL.DeleteProgram(generateProgram);
-                GL.DeleteProgram(firstHitProgram);
+                GL.DeleteProgram(bvhIntersectionProgram);
                 GL.DeleteProgram(bounceProgram);
                 GL.DeleteProgram(shadingProgram);
 
@@ -289,7 +292,7 @@ namespace P
         ~GPURayTracer()
         {
             GL.DeleteProgram(generateProgram);
-            GL.DeleteProgram(firstHitProgram);
+            GL.DeleteProgram(bvhIntersectionProgram);
             GL.DeleteProgram(bounceProgram);
             GL.DeleteProgram(shadingProgram);
         }

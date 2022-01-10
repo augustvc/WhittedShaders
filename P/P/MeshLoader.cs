@@ -14,47 +14,16 @@ namespace P
 
         public static void Init()
         {
-            /*vertices = new float[8 * 4];
-            vertices[0] = 0;
-            vertices[1] = 6;
-            vertices[2] = 0;
-            vertices[3] = 0;
-            vertices[4] = 1;
-            vertices[5] = 0;
+            float[] hardcodedTriangles = new float[]{
+                /*-30f, -50f, -30f,
+                30f, -50f, -30f,
+                -30f, -50f, 30f,
 
-            int test = 8;
-            vertices[0 + test] = 10;
-            vertices[1 + test] = 6;
-            vertices[2 + test] = 0;
-            vertices[3 + test] = 0;
-            vertices[4 + test] = 1;
-            vertices[5 + test] = 0;
-            
-            test = 16;
-            vertices[0 + test] = 0;
-            vertices[1 + test] = 6;
-            vertices[2 + test] = 10;
-            vertices[3 + test] = 0;
-            vertices[4 + test] = 1;
-            vertices[5 + test] = 0;
+                30f, -50f, 30f,
+                30f, -50f, -30f,
+                -30f, -50f, 30f*/
+            };
 
-            test = 24;
-            vertices[0 + test] = 0;
-            vertices[1 + test] = 0;
-            vertices[2 + test] = 0;
-            vertices[3 + test] = 0;
-            vertices[4 + test] = 1;
-            vertices[5 + test] = 0;
-
-            indices = new List<uint>();
-            indices.Add(6);
-            indices.Add(0);
-            indices.Add(1);
-            indices.Add(2);
-            indices.Add(0);
-            indices.Add(1);
-            indices.Add(3);
-            return;*/
             AssimpContext assimpContext = new AssimpContext();
             string teapot = "../../models/teapot.obj";
             string man = "../../models/man.obj";
@@ -64,21 +33,21 @@ namespace P
             Console.WriteLine("... : " + model.MeshCount);
             for (int i = 0; i < model.MeshCount; i++)
             {
-                List<Vector3D> vertices = model.Meshes[i].Vertices;
+                List<Vector3D> verticesList = model.Meshes[i].Vertices;
                 if(!model.Meshes[i].HasNormals)
                 {
                     Console.WriteLine("No normals in this mesh... Setting them all to point up??");
                 }
 
-                MeshLoader.vertices = new float[model.Meshes[i].Vertices.Count * 3];
+                vertices = new float[model.Meshes[i].Vertices.Count * 3];
                 int j = 0;
-                while (j < vertices.Count * 3)
+                while (j < verticesList.Count * 3)
                 {
                     Vector3D vertex = model.Meshes[i].Vertices[j / 3];
                     //Vector3D texCoords = model.Meshes[i].TextureCoordinateChannels[0][j / 8];
                     for (int k = 0; k < 3; k++)
                     {
-                        MeshLoader.vertices[j++] = vertex[k];// * 0.1f;
+                        vertices[j++] = vertex[k];// * 0.1f;
                     }
                 }
                 j = 0;
@@ -128,6 +97,19 @@ namespace P
                 {
                     Console.WriteLine(skipped + " faces had more than 4 indices, skipping them!!!");
                 }
+            }
+
+            Array.Resize(ref vertices, vertices.Length + hardcodedTriangles.Length);
+
+            for(int i = hardcodedTriangles.Length; i > 0; i--)
+            {
+                vertices[vertices.Length - i] = hardcodedTriangles[hardcodedTriangles.Length - i];
+            }
+
+            for (int i = vertices.Length - (hardcodedTriangles.Length); i < vertices.Length; i += 3)
+            {
+                indices.Add((uint)i / 3);
+                indices[0]++;
             }
         }
     }

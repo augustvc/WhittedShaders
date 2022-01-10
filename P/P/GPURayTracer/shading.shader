@@ -1,7 +1,19 @@
 ﻿layout(local_size_x = 64, local_size_y = 1) in;
 layout(rgba32f, binding = 0) uniform image2D img_output;
 
-
+struct Ray
+{
+	vec3 origin;
+	vec3 dir;
+	vec3 invdir;
+	vec3 energy;
+	float t;
+	uint pixelX;
+	uint pixelY;
+	vec3 ambient;
+	int primID;
+	int bvhDebug;
+};
 
 layout(std430, binding = 3) buffer shadowRayBuffer
 {
@@ -22,23 +34,12 @@ void main() {
 		//intersect(ray);
 		float debugVal = ray.bvhDebug;
 		if (debugVal > 0f) {
-			debugVal = 0f;// debugVal / 255.0;
-		}
-		float debugVal2 = 0f;
-		if (ray.bvhDebug > 6) {
-			//debugVal2 = 1.0f;
-		}
-		if (ray.bvhDebug > 15) {
-			//debugVal = 1.0f;
-			debugVal2 = 0f;
+			debugVal = debugVal / 255.0;
 		}
 
-		vec4 pixel = vec4(debugVal, ray.energy.y, debugVal2, 1.0);
-		if(ray.primID == -2) {
-			pixel = vec4(debugVal, 0.0, debugVal2, 1.0);
-		}
+		vec4 pixel = vec4(ray.energy, 1.0);
 		if (ray.primID >= 0) {
-			//pixel = vec4(ray.ambient, 1.0);
+			pixel = vec4(ray.ambient, 1.0);
 		}
 
 		ivec2 pixel_coords = ivec2(ray.pixelX, ray.pixelY);

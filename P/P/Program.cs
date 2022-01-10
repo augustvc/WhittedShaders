@@ -137,6 +137,7 @@ namespace P
                 Console.WriteLine("GPU average fps since launch: " + (GPUFrameCounter / totalGPUTime));
                 Console.WriteLine("GPU average ray generation execution time (ms): " + GPURayTracer.totalGenRayTime / GPURayTracer.totalFrames);
                 Console.WriteLine("GPU average primary ray firsthit shader execution time (ms): " + GPURayTracer.totalPrimaryRayFirstHitTime / GPURayTracer.totalFrames);
+                Console.WriteLine("GPU average shadow ray shader execution time per frame (ms): " + GPURayTracer.totalShadowRayTime / GPURayTracer.totalFrames);
                 renderCheckTime = renderCheckInterval;
             }
             

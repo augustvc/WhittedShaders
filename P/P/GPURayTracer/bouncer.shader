@@ -112,15 +112,6 @@ void main() {
 		int primID = rays[rayNum].primID;
 
 		if (primID < 0) {
-			shadowRays[atomicCounterIncrement(shadowRayCount)] = Ray(
-				rays[rayNum].origin,
-				rays[rayNum].dir,
-				vec3(0.0, 1.0, 0.0),
-				vec3(0.0),
-				100000, rays[rayNum].pixelX, rays[rayNum].pixelY,
-				vec3(0.0),
-				-2,
-				rays[rayNum].bvhDebug);
 			continue;
 		}
 
@@ -191,18 +182,6 @@ void main() {
 				-1,
 				rays[rayNum].bvhDebug);
 			shadowRays[atomicCounterIncrement(shadowRayCount)] = shadowRay;
-		}
-		else {
-			shadowRays[atomicCounterIncrement(shadowRayCount)] = Ray(
-				rays[rayNum].origin,
-				rays[rayNum].dir,
-				vec3(0.0, 1.0, 0.0),
-				vec3(0.0),
-				100000, rays[rayNum].pixelX, rays[rayNum].pixelY,
-				vec3(0.0),
-				-2,
-				rays[rayNum].bvhDebug);
-			continue;
 		}
 	}
 }

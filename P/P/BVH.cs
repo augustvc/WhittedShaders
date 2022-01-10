@@ -33,7 +33,7 @@ namespace P
             RecursiveSplit( TopBVH, 8);
 
             BVH TopBVH2 = new BVH(vertices, indices);
-            RecursiveSplit(TopBVH2, 24);
+            RecursiveSplit(TopBVH2, 31);
 
             Console.WriteLine("Top SAH  : " + TopBVH.SAH);
             Console.WriteLine("Top SAH 2: " + TopBVH2.SAH);
