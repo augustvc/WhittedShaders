@@ -117,7 +117,7 @@ void doTris(int start, int end) {
 
 		vec3 cross1 = cross(ray.dir, ac);
 		float det = dot(ab, cross1);
-		if (abs(det) < 0.0001)
+		if (abs(det) < 0.0000001)
 			continue;
 
 		float detInv = 1.0 / det;
@@ -145,18 +145,17 @@ void doTris(int start, int end) {
 	}
 }
 
-//Dragon bvh nodes: 39053
 
 layout(location = 1) uniform bool anyHit;
 
 int stackCount;
-shared int stack[20 * 64];
+shared int stack[24 * 64];
 
 //Stack stack;
 
 void main() {
 	rayNum = atomicCounterIncrement(intersectionJob);
-	uint stackOffset = gl_LocalInvocationIndex * 20;
+	uint stackOffset = gl_LocalInvocationIndex * 24;
 
 	uint maxRays = 0;
 	if (anyHit) {
@@ -226,6 +225,11 @@ void main() {
 				else {
 					stack[stackOffset + stackCount] = bvh.leftOrStart;
 					stackCount++;
+				}
+			}
+			if (anyHit) {
+				if (ray.primID >= 0) {
+					break;
 				}
 			}
 		}

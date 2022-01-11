@@ -101,6 +101,8 @@ layout(binding = 4, offset = 4) uniform atomic_uint rayCountOut;
 layout(binding = 4, offset = 8) uniform atomic_uint shadowRayCount;
 layout(binding = 4, offset = 12) uniform atomic_uint intersectionJob;
 
+layout(location = 2) uniform int normalsOffset;
+
 void main() {
 	uint rayNum;
 	uint totalRays = atomicCounter(rayCountIn);
@@ -124,10 +126,30 @@ void main() {
 			uint triAI = indexBuffer[primID++];
 			uint triBI = indexBuffer[primID++];
 			uint triCI = indexBuffer[primID++];
+
 			vec3 triA = vec3(vertexBuffer[triAI * 3], vertexBuffer[triAI * 3 + 1], vertexBuffer[triAI * 3 + 2]);
 			vec3 triB = vec3(vertexBuffer[triBI * 3], vertexBuffer[triBI * 3 + 1], vertexBuffer[triBI * 3 + 2]);
 			vec3 triC = vec3(vertexBuffer[triCI * 3], vertexBuffer[triCI * 3 + 1], vertexBuffer[triCI * 3 + 2]);
-			normal = normalize(cross(triC - triA, triB - triA));
+			vec3 ab = triB - triA;
+			vec3 ac = triC - triA;
+
+			vec3 cross1 = cross(rays[rayNum].dir, ac);
+			float det = dot(ab, cross1);
+
+			float detInv = 1.0 / det;
+			vec3 diff = rays[rayNum].origin - triA;
+			float u = dot(diff, cross1) * detInv;
+
+			vec3 cross2 = cross(diff, ab);
+			float v = dot(rays[rayNum].dir, cross2) * detInv;
+
+			normal = normalize(
+				(1.0 - u - v) * vec3(vertexBuffer[normalsOffset + triAI * 3], vertexBuffer[normalsOffset + triAI * 3 + 1], vertexBuffer[normalsOffset + triAI * 3 + 2]) +
+				u * vec3(vertexBuffer[normalsOffset + triBI * 3], vertexBuffer[normalsOffset + triBI * 3 + 1], vertexBuffer[normalsOffset + triBI * 3 + 2]) +
+				v * vec3(vertexBuffer[normalsOffset + triCI * 3], vertexBuffer[normalsOffset + triCI * 3 + 1], vertexBuffer[normalsOffset + triCI * 3 + 2])
+			);
+
+			//normal = normalize(cross(triC - triA, triB - triA));
 			if (dot(rays[rayNum].dir, normal) > 0)
 				normal = -normal;
 		}

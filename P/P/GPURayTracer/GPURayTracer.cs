@@ -88,7 +88,6 @@ namespace P
             Console.WriteLine("Buffer data: " + vertices.Length);
             Console.WriteLine("First: " + vertices[0]);
             Console.WriteLine("Indices data: " + indices.Count);
-            Console.WriteLine("First: " + indices[0]);
             GL.BindBuffer(BufferTarget.ShaderStorageBuffer, vertexBO);
             GL.BufferData(BufferTarget.ShaderStorageBuffer, vertices.Length * sizeof(float), vertices, BufferUsageHint.StaticDraw);
             GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 5, vertexBO);
@@ -147,6 +146,9 @@ namespace P
             GL.BufferData(BufferTarget.ShaderStorageBuffer, 16 * 4 * allNodes.Count, allNodes.ToArray(), BufferUsageHint.StaticDraw);
             GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 7, BVHBO);
 
+            GL.UseProgram(bounceProgram);
+            Console.WriteLine("GL uniform to " + vertices.Length / 2);
+            GL.Uniform1(2, vertices.Length / 2);
         }
 
         void SetupAtomics()

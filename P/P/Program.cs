@@ -67,15 +67,8 @@ namespace P
             Console.WriteLine("update freq: " + this.UpdateFrequency);
 
             MeshLoader.Init();
-            List<uint> indicesForBVH = new List<uint>();
 
-            //Remove first 3 entries
-            for(int i = 3; i < MeshLoader.indices.Count; i++)
-            {
-                indicesForBVH.Add(MeshLoader.indices[i]);
-            }
-
-            Mesh loadedObj = new Mesh(MeshLoader.vertices, indicesForBVH);
+            Mesh loadedObj = new Mesh(MeshLoader.vertices, MeshLoader.indices);
             Mesh tree = MeshGenerator.TreeGenerator.GenerateTree();
 
             Mesh usedMesh = loadedObj;
