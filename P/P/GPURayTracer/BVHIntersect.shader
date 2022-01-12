@@ -183,53 +183,62 @@ void main() {
 		int highZ = ray.dir.z > 0f ? 2 : 5;
 
 		int loc = 0;
+		BVH bvh = bvhs[loc];
 		while (stackCount > 0) {
-			stackCount--;
-			loc = stack[stackOffset + stackCount];
+			while (stackCount > 0) {
+				stackCount--;
+				loc = stack[stackOffset + stackCount];
 
-			float leftDist = rayAABB(bvhs[loc].AABBs[lowX], bvhs[loc].AABBs[lowY], bvhs[loc].AABBs[lowZ], bvhs[loc].AABBs[highX], bvhs[loc].AABBs[highY], bvhs[loc].AABBs[highZ]);
-			float rightDist = rayAABB(bvhs[loc].AABBs[lowX + 6], bvhs[loc].AABBs[lowY + 6], bvhs[loc].AABBs[lowZ + 6], bvhs[loc].AABBs[highX + 6], bvhs[loc].AABBs[highY + 6], bvhs[loc].AABBs[highZ + 6]);
+				float leftDist = rayAABB(bvhs[loc].AABBs[lowX], bvhs[loc].AABBs[lowY], bvhs[loc].AABBs[lowZ], bvhs[loc].AABBs[highX], bvhs[loc].AABBs[highY], bvhs[loc].AABBs[highZ]);
+				float rightDist = rayAABB(bvhs[loc].AABBs[lowX + 6], bvhs[loc].AABBs[lowY + 6], bvhs[loc].AABBs[lowZ + 6], bvhs[loc].AABBs[highX + 6], bvhs[loc].AABBs[highY + 6], bvhs[loc].AABBs[highZ + 6]);
 
-			BVH bvh = bvhs[loc];
+				bvh = bvhs[loc];
+				if (leftDist > rightDist) {
+					int tempI = bvh.leftOrStart;
+					bvh.leftOrStart = bvh.rightOrStart;
+					bvh.rightOrStart = tempI;
 
-			if (leftDist > rightDist) {
-				int tempI = bvh.leftOrStart;
-				bvh.leftOrStart = bvh.rightOrStart;
-				bvh.rightOrStart = tempI;
+					tempI = bvh.leftOrEnd;
+					bvh.leftOrEnd = bvh.rightOrEnd;
+					bvh.rightOrEnd = tempI;
 
-				tempI = bvh.leftOrEnd;
-				bvh.leftOrEnd = bvh.rightOrEnd;
-				bvh.rightOrEnd = tempI;
-
-				float tempF = leftDist;
-				leftDist = rightDist;
-				rightDist = tempF;
-			}
-
-			//Add left later, so it will get popped first.
-			if (rightDist >= 0f && rightDist < ray.t) {
-				if (bvh.rightOrStart != bvh.rightOrEnd) {
-					doTris(bvh.rightOrStart, bvh.rightOrEnd);
+					float tempF = leftDist;
+					leftDist = rightDist;
+					rightDist = tempF;
 				}
-				else {	
-					stack[stackOffset + stackCount] = bvh.rightOrStart;
-					stackCount++;				
+
+				bool foundTris = false;
+				//Add left later, so it will get popped first.
+				if (rightDist >= 0f && rightDist < ray.t) {
+					if (bvh.rightOrStart != bvh.rightOrEnd) {
+						foundTris=true;
+					}
+					else {
+						stack[stackOffset + stackCount] = bvh.rightOrStart;
+						stackCount++;
+					}
 				}
-			}
-			if (leftDist >= 0f && leftDist < ray.t) {
-				if (bvh.leftOrStart != bvh.leftOrEnd) {
-					doTris(bvh.leftOrStart, bvh.leftOrEnd);
+				if (leftDist >= 0f && leftDist < ray.t) {
+					if (bvh.leftOrStart != bvh.leftOrEnd) {
+						foundTris=true;
+					}
+					else {
+						stack[stackOffset + stackCount] = bvh.leftOrStart;
+						stackCount++;
+					}
 				}
-				else {
-					stack[stackOffset + stackCount] = bvh.leftOrStart;
-					stackCount++;
+				if (anyHit) {
+					if (ray.primID >= 0) {
+						break;
+					}
 				}
-			}
-			if (anyHit) {
-				if (ray.primID >= 0) {
+				if (foundTris) {
 					break;
 				}
 			}
+			doTris(bvh.rightOrStart, bvh.rightOrEnd);
+			doTris(bvh.leftOrStart, bvh.leftOrEnd);
+			//foundTris = false;
 		}
 		if (anyHit) {
 			shadowRays[rayNum] = ray;

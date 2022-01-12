@@ -75,7 +75,6 @@
     <None Include="GPURayTracer\bouncer.shader" />
     <None Include="GPURayTracer\BVHIntersect.shader" />
     <None Include="GPURayTracer\generate.shader" />
-    <None Include="GPURayTracer\intersect.shader" />
     <None Include="OpenTK.dll.config" />
     <None Include="packages.config" />
     <None Include="shader.frag" />
