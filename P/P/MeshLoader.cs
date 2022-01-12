@@ -30,7 +30,7 @@ namespace P
             string man = "../../models/man.obj";
             string dragon = "../../models/xyzrgb_dragon.obj";
             string bunny = "../../models/bunny.obj";
-            Scene model = assimpContext.ImportFile(dragon, PostProcessSteps.JoinIdenticalVertices);
+            Scene model = assimpContext.ImportFile(bunny, PostProcessSteps.JoinIdenticalVertices);
             
             Console.WriteLine("... : " + model.MeshCount);
             for (int i = 0; i < model.MeshCount; i++)

@@ -73,7 +73,6 @@
   <ItemGroup>
     <None Include="App.config" />
     <None Include="GPURayTracer\bouncer.shader" />
-    <None Include="GPURayTracer\bruteFirstHit.shader" />
     <None Include="GPURayTracer\BVHIntersect.shader" />
     <None Include="GPURayTracer\generate.shader" />
     <None Include="GPURayTracer\intersect.shader" />

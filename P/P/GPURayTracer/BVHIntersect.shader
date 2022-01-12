@@ -11,7 +11,7 @@ struct Ray
 	uint pixelY;
 	vec3 ambient;
 	int primID;
-	int bvhDebug;
+	int ignore;
 };
 
 layout(std430, binding = 1) buffer rayInBuffer
@@ -117,7 +117,7 @@ void doTris(int start, int end) {
 
 		vec3 cross1 = cross(ray.dir, ac);
 		float det = dot(ab, cross1);
-		if (abs(det) < 0.0000001)
+		if (abs(det) < 0.0000000000000000000001)
 			continue;
 
 		float detInv = 1.0 / det;
@@ -183,9 +183,7 @@ void main() {
 		int highZ = ray.dir.z > 0f ? 2 : 5;
 
 		int loc = 0;
-		ray.bvhDebug = 0;
 		while (stackCount > 0) {
-			ray.bvhDebug++;
 			stackCount--;
 			loc = stack[stackOffset + stackCount];
 

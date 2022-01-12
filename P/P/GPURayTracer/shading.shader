@@ -12,7 +12,7 @@ struct Ray
 	uint pixelY;
 	vec3 ambient;
 	int primID;
-	int bvhDebug;
+	int ignore;
 };
 
 layout(std430, binding = 3) buffer shadowRayBuffer
@@ -32,14 +32,11 @@ void main() {
 
 		iter++;
 		//intersect(ray);
-		float debugVal = ray.bvhDebug;
-		if (debugVal > 0f) {
-			debugVal = debugVal / 255.0;
-		}
 
-		vec4 pixel = vec4(ray.energy, 1.0);
+		vec4 pixel = vec4(max(ray.ambient, ray.energy), 1.0);
 		if (ray.primID >= 0) {
 			pixel = vec4(ray.ambient, 1.0);
+			//pixel = vec4(0.0, 1.0, 0.0, 1.0);
 		}
 
 		ivec2 pixel_coords = ivec2(ray.pixelX, ray.pixelY);

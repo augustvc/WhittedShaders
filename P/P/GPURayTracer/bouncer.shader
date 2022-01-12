@@ -11,7 +11,7 @@ struct Ray
 	uint pixelY;
 	vec3 ambient;
 	int primID;
-	int bvhDebug;
+	int ignore;
 };
 
 layout(std430, binding = 1) buffer rayInBuffer
@@ -66,8 +66,8 @@ struct Triangle
 	Material mat;
 };
 
-vec3 lightPosition = vec3(0.0, 120.0, 0.0);
-vec3 lightValue = vec3(6000.0, 6000.0, 6000.0);
+vec3 lightPosition = vec3(0.0, 1200.0, 0.0);
+vec3 lightValue = vec3(600000.0, 600000.0, 600000.0);
 
 Triangle triangles[] = Triangle[](
 	//  Triangle(vec3(0.0, 4.0, -3.0),vec3(-5.0, 4.0, 3.0), vec3(10.0, 4.0, 0.0), Material(vec3(0.0, 1.0, 0.0), 1.0, 0.0))
@@ -149,9 +149,9 @@ void main() {
 				v * vec3(vertexBuffer[normalsOffset + triCI * 3], vertexBuffer[normalsOffset + triCI * 3 + 1], vertexBuffer[normalsOffset + triCI * 3 + 2])
 			);
 
-			//normal = normalize(cross(triC - triA, triB - triA));
-			if (dot(rays[rayNum].dir, normal) > 0)
-				normal = -normal;
+			//normal = -normalize(cross(triC - triA, triB - triA));
+			//if (dot(rays[rayNum].dir, normal) > 0)
+				//normal = -normal;
 		}
 		else if (primID >= 20000) {
 			mat = triangles[primID - 20000].mat;
@@ -179,11 +179,11 @@ void main() {
 				100000, rays[rayNum].pixelX, rays[rayNum].pixelY,
 				vec3(0.0),
 				-1,
-				rays[rayNum].bvhDebug);
+				-1);
 		}
 
 		if (mat.diffuse > 0.0) {
-			vec3 srOrigin = rays[rayNum].origin + rays[rayNum].dir * rays[rayNum].t + 0.001 * normal;
+			vec3 srOrigin = rays[rayNum].origin + rays[rayNum].dir * rays[rayNum].t + 0.0001 * normal;
 			float ndotl = max(dot(normalize(lightPosition - srOrigin), normal), 0);
 			float distSq = dot(lightPosition - srOrigin, lightPosition - srOrigin);
 			vec3 finalLight = ndotl * (lightValue / distSq);
@@ -202,7 +202,7 @@ void main() {
 				length(lightPosition - srOrigin), rays[rayNum].pixelX, rays[rayNum].pixelY,
 				mat.color * mat.diffuse * 0.05,
 				-1,
-				rays[rayNum].bvhDebug);
+				primID);
 			shadowRays[atomicCounterIncrement(shadowRayCount)] = shadowRay;
 		}
 	}

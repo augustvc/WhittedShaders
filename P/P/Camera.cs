@@ -96,14 +96,14 @@ public static class Camera
         }
         if(input.IsKeyDown(Key.J))
         {
-            double dt = e.Time;
+            double dt = e.Time * 2;
             if (dt > 0.3)
                 dt = 0.3;
             cameraSpeed *= 1 + (float)dt;
         }
         if (input.IsKeyDown(Key.K))
         {
-            double dt = e.Time;
+            double dt = e.Time * 2;
             if (dt > 0.3)
                 dt = 0.3;
             cameraSpeed *= 1 - (float)dt;

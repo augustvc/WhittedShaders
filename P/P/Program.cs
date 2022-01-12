@@ -49,8 +49,6 @@ namespace P
         RayTracer rayTracer;
         GPURayTracer gpuRayTracer;
 
-        System.Timers.Timer timer = new System.Timers.Timer(4);
-
         private void MouseUpdate(Object source, ElapsedEventArgs e)
         {
             Camera.OnMouseMove(this);
@@ -101,7 +99,6 @@ namespace P
 
         protected override void OnUnload(EventArgs e)
         {
-            timer.Stop();
             GL.BindBuffer(BufferTarget.ArrayBuffer, 0);
             GL.DeleteBuffer(VBO);
             shader.Dispose();
