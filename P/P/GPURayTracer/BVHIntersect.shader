@@ -227,11 +227,6 @@ void main() {
 						stackCount++;
 					}
 				}
-				if (anyHit) {
-					if (ray.primID >= 0) {
-						break;
-					}
-				}
 				if (foundTris) {
 					break;
 				}
@@ -239,6 +234,11 @@ void main() {
 			doTris(bvh.rightOrStart, bvh.rightOrEnd);
 			doTris(bvh.leftOrStart, bvh.leftOrEnd);
 			foundTris = false;
+			if (anyHit) {
+				if (ray.primID >= 0) {
+					break;
+				}
+			}
 		}
 		if (anyHit) {
 			shadowRays[rayNum] = ray;
