@@ -184,6 +184,7 @@ void main() {
 
 		int loc = 0;
 		BVH bvh = bvhs[loc];
+		bool foundTris = false;
 		while (stackCount > 0) {
 			while (stackCount > 0) {
 				stackCount--;
@@ -207,7 +208,6 @@ void main() {
 					rightDist = tempF;
 				}
 
-				bool foundTris = false;
 				//Add left later, so it will get popped first.
 				if (rightDist >= 0f && rightDist < ray.t) {
 					if (bvh.rightOrStart != bvh.rightOrEnd) {
@@ -238,7 +238,7 @@ void main() {
 			}
 			doTris(bvh.rightOrStart, bvh.rightOrEnd);
 			doTris(bvh.leftOrStart, bvh.leftOrEnd);
-			//foundTris = false;
+			foundTris = false;
 		}
 		if (anyHit) {
 			shadowRays[rayNum] = ray;
