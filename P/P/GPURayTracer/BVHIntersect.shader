@@ -152,6 +152,8 @@ int stackCount;
 shared int stack[24 * 64];
 
 //Stack stack;
+//#define GL_ARB_shader_group_vote          1
+#extension GL_ARB_shader_group_vote : enable
 
 void main() {
 	rayNum = atomicCounterIncrement(intersectionJob);
@@ -184,9 +186,19 @@ void main() {
 
 		int loc = 0;
 		BVH bvh = bvhs[loc];
-		bool foundTris = false;
-		while (stackCount > 0) {
-			while (stackCount > 0) {
+		int foundTris = 0;
+		int start1 = 0;
+		int start2 = 0;
+		int start3 = 0;
+		int end1 = 0;
+		int end2 = 0;
+		int end3 = 0;
+		while (true) {
+			if (stackCount <= 0 && foundTris <= 0) {
+				foundTris = 3;
+				break;
+			}
+			while (stackCount > 0 && foundTris < 2 && (!allInvocationsARB(foundTris > 0))) {
 				stackCount--;
 				loc = stack[stackOffset + stackCount];
 
@@ -211,7 +223,14 @@ void main() {
 				//Add left later, so it will get popped first.
 				if (rightDist >= 0f && rightDist < ray.t) {
 					if (bvh.rightOrStart != bvh.rightOrEnd) {
-						foundTris=true;
+						if (foundTris == 1) {
+							start2 = bvh.rightOrStart;
+							end2 = bvh.rightOrEnd;
+						} else {
+							start1 = bvh.rightOrStart;
+							end1 = bvh.rightOrEnd;
+						}
+						foundTris++;
 					}
 					else {
 						stack[stackOffset + stackCount] = bvh.rightOrStart;
@@ -220,20 +239,35 @@ void main() {
 				}
 				if (leftDist >= 0f && leftDist < ray.t) {
 					if (bvh.leftOrStart != bvh.leftOrEnd) {
-						foundTris=true;
+						if (foundTris == 2) {
+							start3 = bvh.leftOrStart;
+							end3 = bvh.leftOrEnd;
+						} else if (foundTris == 1) {
+							start2 = bvh.leftOrStart;
+							end2 = bvh.leftOrEnd;
+						} else {
+							start1 = bvh.leftOrStart;
+							end1 = bvh.leftOrEnd;
+						}
+						foundTris++;
 					}
 					else {
 						stack[stackOffset + stackCount] = bvh.leftOrStart;
 						stackCount++;
 					}
 				}
-				if (foundTris) {
-					break;
-				}
 			}
-			doTris(bvh.rightOrStart, bvh.rightOrEnd);
-			doTris(bvh.leftOrStart, bvh.leftOrEnd);
-			foundTris = false;
+			if (foundTris == 2) {
+				start3 = start2;
+				end3 = end2;
+			}
+			if (foundTris == 1) {
+				start3 = start1;
+				end3 = end1;
+			}
+
+			doTris(start3, end3);
+			foundTris--;
 			if (anyHit) {
 				if (ray.primID >= 0) {
 					break;
