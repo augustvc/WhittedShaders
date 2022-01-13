@@ -186,6 +186,8 @@ void main() {
 
 		int loc = 0;
 		BVH bvh = bvhs[loc];
+
+		//Triangle ranges that have to be done (tiny stack)
 		int foundTris = 0;
 		int start1 = 0;
 		int start2 = 0;
@@ -193,6 +195,7 @@ void main() {
 		int end1 = 0;
 		int end2 = 0;
 		int end3 = 0;
+
 		while (true) {
 			if (stackCount <= 0 && foundTris <= 0) {
 				foundTris = 3;
@@ -256,6 +259,11 @@ void main() {
 						stackCount++;
 					}
 				}
+			}
+			if (foundTris < 1) {
+				//Slightly faster doing this currently, but not necessary.
+				foundTris = 3;
+				break;
 			}
 			if (foundTris == 2) {
 				start3 = start2;
