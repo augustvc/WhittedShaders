@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Assimp;
+using OpenTK;
 
 namespace P
 {
@@ -14,78 +15,45 @@ namespace P
 
         public static void Init()
         {
-            /*vertices = new float[8 * 4];
-            vertices[0] = 0;
-            vertices[1] = 6;
-            vertices[2] = 0;
-            vertices[3] = 0;
-            vertices[4] = 1;
-            vertices[5] = 0;
+            float[] hardcodedTriangles = new float[]{
+                /*-40f, -50f, -40f,
+                40f, -50f, -40f,
+                -40f, -50f, 40f,
 
-            int test = 8;
-            vertices[0 + test] = 10;
-            vertices[1 + test] = 6;
-            vertices[2 + test] = 0;
-            vertices[3 + test] = 0;
-            vertices[4 + test] = 1;
-            vertices[5 + test] = 0;
-            
-            test = 16;
-            vertices[0 + test] = 0;
-            vertices[1 + test] = 6;
-            vertices[2 + test] = 10;
-            vertices[3 + test] = 0;
-            vertices[4 + test] = 1;
-            vertices[5 + test] = 0;
+                40f, -50f, 40f,
+                40f, -50f, -40f,
+                -40f, -50f, 40f*/
+            };
 
-            test = 24;
-            vertices[0 + test] = 0;
-            vertices[1 + test] = 0;
-            vertices[2 + test] = 0;
-            vertices[3 + test] = 0;
-            vertices[4 + test] = 1;
-            vertices[5 + test] = 0;
-
-            indices = new List<uint>();
-            indices.Add(6);
-            indices.Add(0);
-            indices.Add(1);
-            indices.Add(2);
-            indices.Add(0);
-            indices.Add(1);
-            indices.Add(3);
-            return;*/
             AssimpContext assimpContext = new AssimpContext();
             string teapot = "../../models/teapot.obj";
             string man = "../../models/man.obj";
             string dragon = "../../models/xyzrgb_dragon.obj";
-            Scene model = assimpContext.ImportFile(dragon);
-
+            string bunny = "../../models/bunny.obj";
+            Scene model = assimpContext.ImportFile(dragon, PostProcessSteps.JoinIdenticalVertices);
+            
             Console.WriteLine("... : " + model.MeshCount);
             for (int i = 0; i < model.MeshCount; i++)
             {
-                List<Vector3D> vertices = model.Meshes[i].Vertices;
+                List<Vector3D> verticesList = model.Meshes[i].Vertices;
                 if(!model.Meshes[i].HasNormals)
                 {
-                    Console.WriteLine("No normals in this mesh... Setting them all to point up??");
+                    Console.WriteLine("No normals in this mesh");// ... Setting them all to point up??");
                 }
 
-                MeshLoader.vertices = new float[model.Meshes[i].Vertices.Count * 3];
+                vertices = new float[model.Meshes[i].Vertices.Count * 6];
                 int j = 0;
-                while (j < vertices.Count * 3)
+                while (j < verticesList.Count * 3)
                 {
                     Vector3D vertex = model.Meshes[i].Vertices[j / 3];
                     //Vector3D texCoords = model.Meshes[i].TextureCoordinateChannels[0][j / 8];
                     for (int k = 0; k < 3; k++)
                     {
-                        MeshLoader.vertices[j++] = vertex[k];// * 0.1f;
+                        vertices[j++] = vertex[k];// * 0.1f;
                     }
                 }
                 j = 0;
                 indices = new List<uint>();
-                indices.Add(0);
-                indices.Add(0);
-                indices.Add(0);
 
                 int skipped = 0;
                 int tris = 0;
@@ -106,7 +74,6 @@ namespace P
                             }
                             indices.Add((uint)model.Meshes[i].Faces[j].Indices[k]);
                         }
-                        indices[0] += 6;
                     }
                     else if (model.Meshes[i].Faces[j].IndexCount == 3)
                     {
@@ -115,7 +82,6 @@ namespace P
                         {
                             indices.Add((uint)model.Meshes[i].Faces[j].Indices[k]);
                         }
-                        indices[0] += 3;
                     } else
                     {
                         skipped++;
@@ -128,6 +94,82 @@ namespace P
                 {
                     Console.WriteLine(skipped + " faces had more than 4 indices, skipping them!!!");
                 }
+            }
+
+            //Add hardcoded triangles to the mesh:
+            Array.Resize(ref vertices, vertices.Length + hardcodedTriangles.Length*2);
+
+            for(int i = hardcodedTriangles.Length; i > 0; i--)
+            {
+                vertices[vertices.Length / 2 - i] = hardcodedTriangles[hardcodedTriangles.Length - i];
+            }
+
+            for (int i = vertices.Length / 2 - (hardcodedTriangles.Length); i < vertices.Length / 2; i += 3)
+            {
+                indices.Add((uint)i / 3);
+            }
+
+            //Add normals
+            uint[] indicesOccurence = new uint[(vertices.Length / 2) / 3];
+            Dictionary<uint, Vector3> indicesTotal = new Dictionary<uint, Vector3>();
+            for(int i = 0; i < indices.Count; i+=3)
+            {
+                uint triAI = indices[i];
+                uint triBI = indices[i+1];
+                uint triCI = indices[i+2];
+                Vector3 triA = new Vector3(vertices[triAI * 3], vertices[triAI * 3 + 1], vertices[triAI * 3 + 2]);
+                Vector3 triB = new Vector3(vertices[triBI * 3], vertices[triBI * 3 + 1], vertices[triBI * 3 + 2]);
+                Vector3 triC = new Vector3(vertices[triCI * 3], vertices[triCI * 3 + 1], vertices[triCI * 3 + 2]);
+                Vector3 normal = (Vector3.Cross(triC - triA, triB - triA)).Normalized();
+                indicesOccurence[triAI]++;
+                indicesOccurence[triBI]++;
+                indicesOccurence[triCI]++;
+
+                if (!indicesTotal.ContainsKey(triAI))
+                {
+                    indicesTotal.Add(triAI, normal);
+                } else { 
+                    indicesTotal[triAI] += normal;
+                }
+                if (!indicesTotal.ContainsKey(triBI))
+                {
+                    indicesTotal.Add(triBI, normal);
+                } else {
+                    indicesTotal[triBI] += normal;
+                }
+                if (!indicesTotal.ContainsKey(triCI))
+                {
+                    indicesTotal.Add(triCI, normal);
+                } else {
+                    indicesTotal[triCI] += normal;
+                }
+            }
+
+            for (uint i = 0; i < indicesOccurence.Length; i++)
+            {
+                if (indicesTotal.ContainsKey(i))
+                {
+                    for (int k = 0; k < 3; k++)
+                    {
+                        vertices[vertices.Length / 2 + (i * 3) + k] = -indicesTotal[i][k] / indicesOccurence[i];
+                    }
+                }
+            }
+            Dictionary<Vector3, int> testDict = new Dictionary<Vector3, int>();
+            for (int i = 0; i < vertices.Length / 2; i+=3)
+            {
+                Vector3 vx = new Vector3(vertices[i], vertices[i + 1], vertices[i + 2]);
+                if (testDict.ContainsKey(vx))
+                {
+                    testDict[vx]++;
+                } else
+                {
+                    testDict[vx] = 1;
+                }
+            }
+            foreach(KeyValuePair<Vector3, int> kv in testDict)
+            {
+                //Console.WriteLine(kv.Value + " of: " + kv.Key);
             }
         }
     }

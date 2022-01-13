@@ -94,6 +94,20 @@ public static class Camera
         {
             cameraPosition -= cameraUp * cameraSpeed * (float)e.Time; //Down
         }
+        if(input.IsKeyDown(Key.J))
+        {
+            double dt = e.Time * 2;
+            if (dt > 0.3)
+                dt = 0.3;
+            cameraSpeed *= 1 + (float)dt;
+        }
+        if (input.IsKeyDown(Key.K))
+        {
+            double dt = e.Time * 2;
+            if (dt > 0.3)
+                dt = 0.3;
+            cameraSpeed *= 1 - (float)dt;
+        }
     }
 
     static float prevX;

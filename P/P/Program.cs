@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,6 +9,7 @@ using OpenTK.Graphics.OpenGL;
 using OpenTK;
 using System.Threading;
 using System.Timers;
+using System.Diagnostics;
 
 namespace P
 {
@@ -16,6 +17,9 @@ namespace P
     {
         double renderCheckTime = 2.0;
         double renderCheckInterval = 5.0;
+
+        double totalGPUTime;
+        long GPUFrameCounter;
 
         static bool useGPU = true;
         static void Main(string[] args)
@@ -27,6 +31,7 @@ namespace P
             }
             using (Game game = new Game(1920, 1000, title))
             {
+                game.VSync = VSyncMode.Off;
                 game.Run(0.0, 0.0);
             }
         }
@@ -44,21 +49,24 @@ namespace P
         RayTracer rayTracer;
         GPURayTracer gpuRayTracer;
 
+        private void MouseUpdate(Object source, ElapsedEventArgs e)
+        {
+            Camera.OnMouseMove(this);
+        }
+
         protected override void OnLoad(EventArgs e)
         {
+            //timer.Elapsed += MouseUpdate;
+            //timer.AutoReset = true;
+            //timer.Enabled = true;
+
+            //TargetUpdateFrequency = 60.0;
             Console.WriteLine("update period: " + this.UpdatePeriod);
             Console.WriteLine("update freq: " + this.UpdateFrequency);
 
             MeshLoader.Init();
-            List<uint> indicesForBVH = new List<uint>();
 
-            //Remove first 3 entries
-            for(int i = 3; i < MeshLoader.indices.Count; i++)
-            {
-                indicesForBVH.Add(MeshLoader.indices[i]);
-            }
-
-            Mesh loadedObj = new Mesh(MeshLoader.vertices, indicesForBVH);
+            Mesh loadedObj = new Mesh(MeshLoader.vertices, MeshLoader.indices);
             Mesh tree = MeshGenerator.TreeGenerator.GenerateTree();
 
             Mesh usedMesh = loadedObj;
@@ -106,6 +114,8 @@ namespace P
             }
             else
             {
+                totalGPUTime += e.Time;
+                GPUFrameCounter++;
                 GPUFrame();
             }
             renderCheckTime -= e.Time;
@@ -114,8 +124,13 @@ namespace P
                 Console.WriteLine("Total primary ray bvh checks: " + RayTracer.totalPrimaryBVHChecks);
                 Console.WriteLine("Avg Render time: " + RayTracer.averageFrameTime);
                 Console.WriteLine("Render fps: " + RenderFrequency);
+                Console.WriteLine("GPU average fps since launch: " + (GPUFrameCounter / totalGPUTime));
+                Console.WriteLine("GPU average ray generation execution time (ms): " + GPURayTracer.totalGenRayTime / GPURayTracer.totalFrames);
+                Console.WriteLine("GPU average primary ray firsthit shader execution time (ms): " + GPURayTracer.totalPrimaryRayFirstHitTime / GPURayTracer.totalFrames);
+                Console.WriteLine("GPU average shadow ray shader execution time per frame (ms): " + GPURayTracer.totalShadowRayTime / GPURayTracer.totalFrames);
                 renderCheckTime = renderCheckInterval;
             }
+            
             base.OnRenderFrame(e);
         }
 

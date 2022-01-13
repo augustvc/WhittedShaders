@@ -30,8 +30,13 @@ namespace P
 
             this.vertices = vertices;
             TopBVH = new BVH(vertices, indices);
-            RecursiveSplit( TopBVH);
+            RecursiveSplit( TopBVH, 8);
 
+            BVH TopBVH2 = new BVH(vertices, indices);
+            RecursiveSplit(TopBVH2, 31);
+
+            Console.WriteLine("Top SAH  : " + TopBVH.SAH);
+            Console.WriteLine("Top SAH 2: " + TopBVH2.SAH);
 
             threads = new Thread[desiredThreads];
 
@@ -65,15 +70,13 @@ namespace P
             Console.WriteLine("BVH building duration in ms: " + sw.ElapsedMilliseconds);
         }
 
-        void RecursiveSplit(BVH bvh)
+        void RecursiveSplit(BVH bvh, int binCount)
         {
-            if(bvh.triangleIndices.Length < 8000)
+            const int desiredTris = 8;
+            if(bvh.triangleIndices.Length <= desiredTris * 3)
             {
-                //Console.WriteLine("Making too small bvh for testing purposes (remove later)");
-               // return;
+                return;
             }
-
-            int binCount = 8;
 
             int splitAxis = 0;
             float biggestRange = 0f;
@@ -189,7 +192,7 @@ namespace P
 
             if (SAHLeft + SAHRight  >= bvh.SAH)
             {
-                if (bvh.triangleIndices.Length < 24)
+                if (bvh.triangleIndices.Length < desiredTris * 3)
                 {
                     return;
                 }
@@ -246,23 +249,23 @@ namespace P
 
             if (leftPrims < primsPerJob)
             {
-                RecursiveSplit( leftBVH);
+                RecursiveSplit( leftBVH, binCount);
             } else
             {
                 lock (jobs)
                 {
-                    jobs.Add(new Action(() => RecursiveSplit( leftBVH)));
+                    jobs.Add(new Action(() => RecursiveSplit( leftBVH, binCount)));
                 }
             }
 
             if (rightPrims < primsPerJob)
             {
-                RecursiveSplit( rightBVH);
+                RecursiveSplit( rightBVH, binCount);
             } else
             {
                 lock (jobs)
                 {
-                    jobs.Add(new Action(() => RecursiveSplit( rightBVH)));
+                    jobs.Add(new Action(() => RecursiveSplit( rightBVH, binCount)));
                 }
             }
 

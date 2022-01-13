@@ -73,11 +73,8 @@
   <ItemGroup>
     <None Include="App.config" />
     <None Include="GPURayTracer\bouncer.shader" />
-    <None Include="GPURayTracer\bruteFirstHit.shader" />
-    <None Include="GPURayTracer\BVHFirstHit.shader" />
-    <None Include="GPURayTracer\generate.shader" />
     <None Include="GPURayTracer\BVHIntersect.shader" />
-    <None Include="GPURayTracer\intersect.shader" />
+    <None Include="GPURayTracer\generate.shader" />
     <None Include="OpenTK.dll.config" />
     <None Include="packages.config" />
     <None Include="shader.frag" />

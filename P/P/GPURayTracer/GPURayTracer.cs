@@ -14,7 +14,7 @@ namespace P
     class GPURayTracer
     {
         int generateProgram;
-        int firstHitProgram;
+        int bvhIntersectionProgram;
         int bounceProgram;
         int shadingProgram;
         int[] raySSBOs = { -1, -1 };
@@ -31,16 +31,16 @@ namespace P
         public GPURayTracer ()
         {
             generateProgram = Shader.CreateComputeShaderProgram("#version 460", new string[] { "GPURayTracer/generate.shader" });
-            firstHitProgram = Shader.CreateComputeShaderProgram("#version 430", new string[] { "GPURayTracer/BVHFirstHit.shader" });
+            bvhIntersectionProgram = Shader.CreateComputeShaderProgram("#version 430", new string[] { "GPURayTracer/BVHIntersect.shader" });
             bounceProgram = Shader.CreateComputeShaderProgram("#version 430", new string[] { "GPURayTracer/bouncer.shader" });
-            shadingProgram = Shader.CreateComputeShaderProgram("#version 430", new string[] { "GPURayTracer/BVHIntersect.shader", "GPURayTracer/shading.shader" });
+            shadingProgram = Shader.CreateComputeShaderProgram("#version 430", new string[] { "GPURayTracer/shading.shader" });
 
             SetupRayBuffers(width, height);
         }
 
         void SetupRayBuffers(int width, int height)
         {
-            GL.UseProgram(firstHitProgram);
+            GL.UseProgram(bvhIntersectionProgram);
 
             for (int i = 0; i < 2; i++)
             {
@@ -81,83 +81,74 @@ namespace P
 
         public void SetupTriangleBuffers(float[] vertices, List<uint> indices, TopLevelBVH topLevelBVH)
         {
-            GL.UseProgram(firstHitProgram);
+            GL.UseProgram(bvhIntersectionProgram);
             if (vertexBO == -1) vertexBO = GL.GenBuffer();
             if (BVHBO == -1) BVHBO = GL.GenBuffer();
 
             Console.WriteLine("Buffer data: " + vertices.Length);
             Console.WriteLine("First: " + vertices[0]);
             Console.WriteLine("Indices data: " + indices.Count);
-            Console.WriteLine("First: " + indices[0]);
             GL.BindBuffer(BufferTarget.ShaderStorageBuffer, vertexBO);
             GL.BufferData(BufferTarget.ShaderStorageBuffer, vertices.Length * sizeof(float), vertices, BufferUsageHint.StaticDraw);
             GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 5, vertexBO);
 
-
-            List<BVH> order = new List<BVH>();
-            Dictionary<int, int> nrToOrder = new Dictionary<int, int>();
-            List<BVH> stack = new List<BVH>();
-
-            stack.Add(topLevelBVH.TopBVH);
-
-            while(stack.Count > 0)
-            {
-                BVH next = stack[stack.Count - 1];
-                stack.RemoveAt(stack.Count - 1);
-
-                order.Add(next);
-                nrToOrder.Add(next.nodeNumber, order.Count - 1);
-
-                if(!next.isLeaf)
-                {
-                    stack.Add(next.leftChild);
-                    stack.Add(next.rightChild);
-                }
-            }
-
-            GPUBVH[] allNodes = new GPUBVH[order.Count];
+            List<GPUBVH> allNodes = new List<GPUBVH>();
             List<uint> newIndices = new List<uint>();
-            for (int i = 0; i < order.Count; i++)
+
+            int addBVH(BVH bvh)
             {
-                if (order[i].isLeaf)
+                if (bvh.isLeaf)
                 {
-                    allNodes[i] = new GPUBVH(order[i].AABBMin, order[i].AABBMax, newIndices.Count, newIndices.Count + order[i].triangleIndices.Length, 0, 0);
-                    newIndices.AddRange(order[i].triangleIndices);
+                    return -1;
+                }
+                BVH left = bvh.leftChild;
+                BVH right = bvh.rightChild;
+
+                allNodes.Add(new GPUBVH(left.AABBMin, left.AABBMax, right.AABBMin, right.AABBMax));
+                int nodeIdx = allNodes.Count - 1;
+
+                int leftOrStart = 0;
+                int leftOrEnd = 0;
+                int rightOrStart = 0;
+                int rightOrEnd = 0;
+                if(left.isLeaf)
+                {
+                    leftOrStart = newIndices.Count;
+                    newIndices.AddRange(left.triangleIndices);
+                    leftOrEnd = newIndices.Count;
                 } else
                 {
-                    allNodes[i] = new GPUBVH(order[i].AABBMin, order[i].AABBMax, 0, 0, nrToOrder[order[i].leftChild.nodeNumber], nrToOrder[order[i].rightChild.nodeNumber]);
-                }                 
-            }
-
-            void setParent(int idx, int parent)
-            {
-                allNodes[idx] = new GPUBVH(allNodes[idx], parent);
-            }
-
-            //Set parent numbers:
-            for (int i = 0; i < order.Count; i++)
-            {
-                if(!order[i].isLeaf)
-                {
-                    setParent(nrToOrder[order[i].leftChild.nodeNumber], i);
-                    setParent(nrToOrder[order[i].rightChild.nodeNumber], i);
+                    leftOrStart = leftOrEnd = addBVH(left);
                 }
+                if(right.isLeaf)
+                {
+                    rightOrStart = newIndices.Count;
+                    newIndices.AddRange(right.triangleIndices);
+                    rightOrEnd = newIndices.Count;
+                } else
+                {
+                    rightOrStart = rightOrEnd = addBVH(right);
+                }
+
+                allNodes[nodeIdx] = new GPUBVH(allNodes[nodeIdx], leftOrStart, leftOrEnd, rightOrStart, rightOrEnd);
+                return nodeIdx;
             }
+
+            addBVH(topLevelBVH.TopBVH);
 
             GL.BindBuffer(BufferTarget.ShaderStorageBuffer, faceBO);
             GL.BufferData(BufferTarget.ShaderStorageBuffer, newIndices.Count * sizeof(uint), newIndices.ToArray(), BufferUsageHint.StaticDraw);
             GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 6, faceBO);
 
-            //gPUBVHs = new List<GPUBVH>();
-            //gPUBVHs.Add(new GPUBVH(new Vector3(float.MaxValue), new Vector3(float.MinValue), 0, 2));
-            //gPUBVHs.Add(new GPUBVH(new Vector3(float.MinValue), new Vector3(float.MaxValue), 0, newIndices.Count));
-
-            Console.WriteLine("All nodes: " + allNodes.Length);
+            Console.WriteLine("All nodes: " + allNodes.Count);
 
             GL.BindBuffer(BufferTarget.ShaderStorageBuffer, BVHBO);
-            GL.BufferData(BufferTarget.ShaderStorageBuffer, 11 * 4 * allNodes.Length, allNodes.ToArray(), BufferUsageHint.StaticDraw);
+            GL.BufferData(BufferTarget.ShaderStorageBuffer, 16 * 4 * allNodes.Count, allNodes.ToArray(), BufferUsageHint.StaticDraw);
             GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 7, BVHBO);
 
+            GL.UseProgram(bounceProgram);
+            Console.WriteLine("GL uniform to " + vertices.Length / 2);
+            GL.Uniform1(2, vertices.Length / 2);
         }
 
         void SetupAtomics()
@@ -171,12 +162,16 @@ namespace P
                 GL.BufferData(BufferTarget.AtomicCounterBuffer, sizeof(uint) * 4, test, BufferUsageHint.StaticDraw);
                 GL.BindBufferBase(BufferRangeTarget.AtomicCounterBuffer, 4, rayCounterBO);
                 
-                GL.UseProgram(firstHitProgram);
+                GL.UseProgram(bvhIntersectionProgram);
                 GL.BindBuffer(BufferTarget.AtomicCounterBuffer, rayCounterBO);
                 GL.BindBufferBase(BufferRangeTarget.AtomicCounterBuffer, 4, rayCounterBO);
             }
         }
 
+        static public double totalShadowRayTime = 0.0;
+        static public double totalPrimaryRayFirstHitTime = 0.0;
+        static public double totalGenRayTime= 0.0;
+        static public int totalFrames = 0;
         public void GenTex(int width, int height)
         {
             if (width != this.width || height != this.height)
@@ -205,11 +200,16 @@ namespace P
             GL.BindBuffer(BufferTarget.ShaderStorageBuffer, raySSBOs[currentInBuffer]);
             GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 1, raySSBOs[currentInBuffer]);
 
-            GL.DispatchCompute(width * samplesSqrt / 32, height * samplesSqrt, 1);
+            Stopwatch genSW = new Stopwatch();
+            genSW.Start();
+            GL.DispatchCompute((width * samplesSqrt) / 32, (height * samplesSqrt), 1);
             //GL.MemoryBarrier(MemoryBarrierFlags.ShaderStorageBarrierBit);
             //GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
             GL.Finish();
-
+            genSW.Stop();
+            totalGenRayTime += genSW.Elapsed.TotalMilliseconds;
+            totalFrames++;
+            //Console.WriteLine("Generating rays took " + genSW.ElapsedMilliseconds + " ms");
 
             int maximumBounces = 1;
             for (int i = 0; i < maximumBounces; i++)
@@ -220,7 +220,7 @@ namespace P
                 GL.BufferSubData(BufferTarget.AtomicCounterBuffer, new IntPtr(sizeof(uint) * 2), sizeof(uint), new uint[] { 0 });
 
                 //Swap the in-ray buffer with the out-ray buffer:
-                GL.UseProgram(firstHitProgram);
+                GL.UseProgram(bvhIntersectionProgram);
                 GL.BindBuffer(BufferTarget.ShaderStorageBuffer, raySSBOs[currentInBuffer]);
                 GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 1, raySSBOs[currentInBuffer]);
 
@@ -229,27 +229,38 @@ namespace P
 
                 //Reset the counter for the output buffer, so we can start filling it from 0:
                 GL.BufferSubData(BufferTarget.AtomicCounterBuffer, new IntPtr(sizeof(uint)), sizeof(uint), new uint[] { 0 });
-                //Reset the intersection job and shadow ray job counters
+                //Reset the intersection job counter
                 GL.BufferSubData(BufferTarget.AtomicCounterBuffer, new IntPtr(sizeof(uint) * 3), sizeof(uint), new uint[] { 0 });
 
                 Stopwatch sw = new Stopwatch();
                 sw.Start();
                 //Run the programs
-                GL.DispatchCompute(8704 * 4 / 32, 1, 1);
-                //GL.MemoryBarrier(MemoryBarrierFlags.ShaderStorageBarrierBit);
-                //GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
+                GL.Uniform1(1, 0);
+                GL.DispatchCompute(8704 * 4 / 64, 1, 1);
                 GL.Finish();
                 sw.Stop();
-                //Console.WriteLine("Frame time: " + sw.ElapsedMilliseconds);
+                if (i == 0)
+                {
+                    totalPrimaryRayFirstHitTime += sw.Elapsed.TotalMilliseconds;
+                }
 
                 GL.UseProgram(bounceProgram);
                 GL.DispatchCompute(262144 / 64, 1, 1);
                 GL.Finish();
 
+                sw.Restart();
+                GL.UseProgram(bvhIntersectionProgram);
+                //Reset the intersection job counter
+                GL.BufferSubData(BufferTarget.AtomicCounterBuffer, new IntPtr(sizeof(uint) * 3), sizeof(uint), new uint[] { 0 });
+                GL.Uniform1(1, 1);
+                GL.DispatchCompute(8704 * 4 / 64, 1, 1);
+                GL.Finish();
+                sw.Stop();
+                totalShadowRayTime += sw.Elapsed.TotalMilliseconds;
+
+
                 GL.UseProgram(shadingProgram);
                 GL.DispatchCompute(262144 / 64, 1, 1);
-                //GL.MemoryBarrier(MemoryBarrierFlags.ShaderStorageBarrierBit);
-                //GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
                 GL.Finish();
 
                 //Swap counters
@@ -261,6 +272,7 @@ namespace P
                     new IntPtr(sizeof(uint) * 3), new IntPtr(sizeof(uint)), sizeof(uint));
 
                 currentInBuffer = 1 - currentInBuffer;
+                //Console.WriteLine("Finishing up time: " + sw.Elapsed);
             }
         }
 
@@ -271,7 +283,7 @@ namespace P
             if (!disposedValue)
             {
                 GL.DeleteProgram(generateProgram);
-                GL.DeleteProgram(firstHitProgram);
+                GL.DeleteProgram(bvhIntersectionProgram);
                 GL.DeleteProgram(bounceProgram);
                 GL.DeleteProgram(shadingProgram);
 
@@ -282,7 +294,7 @@ namespace P
         ~GPURayTracer()
         {
             GL.DeleteProgram(generateProgram);
-            GL.DeleteProgram(firstHitProgram);
+            GL.DeleteProgram(bvhIntersectionProgram);
             GL.DeleteProgram(bounceProgram);
             GL.DeleteProgram(shadingProgram);
         }
@@ -304,43 +316,66 @@ namespace P
         }
     }
 
-    struct GPUBVH
+    unsafe struct GPUBVH
     {
-        public float minX;
-        public float minY;
-        public float minZ;
-        public float maxX;
-        public float maxY;
-        public float maxZ;
+        //[MarshalAs(UnmanagedType.ByValArray, SizeConst = 24)]
+        fixed float AABBs[12];
 
-        public int indicesStart;
-        public int indicesEnd;
+        public int leftOrStart;
+        public int leftOrEnd;
 
-        public int parent;
-        public int leftChild;
-        public int rightChild;
+        public int rightOrStart;
+        public int rightOrEnd;
 
-        public GPUBVH(GPUBVH parentless, int parent)
+        public GPUBVH(GPUBVH oldVersion, int leftOrStartp, int leftOrEndp, int rightOrStartp, int rightOrEndp)
         {
-            this = parentless;
-            this.parent = parent;
+            this = oldVersion;
+            leftOrStart = leftOrStartp;
+            leftOrEnd = leftOrEndp;
+            rightOrStart = rightOrStartp;
+            rightOrEnd = rightOrEndp;
         }
 
-        public GPUBVH(Vector3 AABBMin, Vector3 AABBMax, int indicesStart, int indicesEnd, int leftChild, int rightChild)
+        public GPUBVH(Vector3 AABBMinL, Vector3 AABBMaxL, Vector3 AABBMinR, Vector3 AABBMaxR)
         {
-            minX = AABBMin.X;
-            minY = AABBMin.Y;
-            minZ = AABBMin.Z;
-            maxX = AABBMax.X;
-            maxY = AABBMax.Y;
-            maxZ = AABBMax.Z;
+            AABBs[0] = AABBMinL.X;
+            AABBs[1] = AABBMinL.Y;
+            AABBs[2] = AABBMinL.Z;
+            AABBs[3] = AABBMaxL.X;
+            AABBs[4] = AABBMaxL.Y;
+            AABBs[5] = AABBMaxL.Z;
+            AABBs[6] = AABBMinR.X;
+            AABBs[7] = AABBMinR.Y;
+            AABBs[8] = AABBMinR.Z;
+            AABBs[9] = AABBMaxR.X;
+            AABBs[10] = AABBMaxR.Y;
+            AABBs[11] = AABBMaxR.Z;
 
-            this.indicesStart = indicesStart;
-            this.indicesEnd = indicesEnd;
+            leftOrStart = 0;
+            leftOrEnd = 3;
+            rightOrStart = 0;
+            rightOrEnd = 3;
+        }
 
-            this.parent = -1;
-            this.leftChild = leftChild;
-            this.rightChild = rightChild;
+        public GPUBVH(Vector3 AABBMinL, Vector3 AABBMaxL, Vector3 AABBMinR, Vector3 AABBMaxR, int leftOrStartp, int leftOrEndp, int rightOrStartp, int rightOrEndp)
+        {
+            AABBs[0] = AABBMinL.X;
+            AABBs[1] = AABBMinL.Y;
+            AABBs[2] = AABBMinL.Z;
+            AABBs[3] = AABBMaxL.X;
+            AABBs[4] = AABBMaxL.Y;
+            AABBs[5] = AABBMaxL.Z;
+            AABBs[6] = AABBMinR.X;
+            AABBs[7] = AABBMinR.Y;
+            AABBs[8] = AABBMinR.Z;
+            AABBs[9] = AABBMaxR.X;
+            AABBs[10] = AABBMaxR.Y;
+            AABBs[11] = AABBMaxR.Z;
+
+            leftOrStart = leftOrStartp;
+            leftOrEnd = leftOrEndp;
+            rightOrStart = rightOrStartp;
+            rightOrEnd = rightOrEndp;
         }
     }
 }

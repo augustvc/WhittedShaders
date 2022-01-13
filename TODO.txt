@@ -1,9 +1,3 @@
-Have a BVHnode contain the AABBs of its two children.
-A bvh node can be 64 bytes so you can put:
-2 aabbs = 12 floats = 48 bytes
-primitiveStart for both = 8 bytes (at 56 now) -> always do 8 ray/prim intersections?
-bvhId for both = 8 bytes (at 64 now)
-
 Fetch BVH nodes through 1D texture, to benefit from texture cache?
 
  An important detail is that one should avoid the
@@ -11,3 +5,10 @@ while-while loop organization here because the new rays tend to
 visit many nodes before they find first primitives to intersect. Better SIMD efficiency and performance can be obtained by limiting
 the while loops to max N iterations, we used N = 4.
 
+
+
+Use shared memory for dynamically indexed arrays, where local memory sucks.
+
+Look more into the BVH. It can probably get a lot better!
+
+Try using vectors to enable SIMD on the GPU for ray/AABB tests?!
