@@ -10,3 +10,5 @@ the while loops to max N iterations, we used N = 4.
 Use shared memory for dynamically indexed arrays, where local memory sucks.
 
 Look more into the BVH. It can probably get a lot better!
+
+Try using vectors to enable SIMD on the GPU for ray/AABB tests?!
