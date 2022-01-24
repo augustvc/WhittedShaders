@@ -314,6 +314,18 @@ namespace P
             Dispose(true);
             GC.SuppressFinalize(this);
         }
+
+        //transformation code
+        
+            Vector4 vec = new Vector4(1.0f, 0.0f, 0.0f, 1.0f);
+            Matrix4 trans = Matrix4.CreateTranslation(1f, 1f, 0.0f);
+            vec *= trans;
+
+            Matrix4 rotation = Matrix4.CreateRotationZ(MathHelper.DegreesToRadians(90.0f));
+            Matrix4 scale = Matrix4.CreateScale(0.5f, 0.5f, 0.5f);
+            trans = rotation * scale;
+        
+         
     }
 
     unsafe struct GPUBVH
@@ -377,5 +389,10 @@ namespace P
             rightOrStart = rightOrStartp;
             rightOrEnd = rightOrEndp;
         }
+
+        
+
     }
+
+    
 }
