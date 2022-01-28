@@ -28,7 +28,7 @@ namespace P
         int textureHandle = -1;
         int samplesSqrt = 1;
 
-        public GPURayTracer ()
+        public GPURayTracer()
         {
             generateProgram = Shader.CreateComputeShaderProgram("#version 460", new string[] { "GPURayTracer/generate.shader" });
             bvhIntersectionProgram = Shader.CreateComputeShaderProgram("#version 430", new string[] { "GPURayTracer/BVHIntersect.shader" });
@@ -111,7 +111,7 @@ namespace P
                 int leftOrEnd = 0;
                 int rightOrStart = 0;
                 int rightOrEnd = 0;
-                if(left.isLeaf)
+                if (left.isLeaf)
                 {
                     leftOrStart = newIndices.Count;
                     newIndices.AddRange(left.triangleIndices);
@@ -120,7 +120,7 @@ namespace P
                 {
                     leftOrStart = leftOrEnd = addBVH(left);
                 }
-                if(right.isLeaf)
+                if (right.isLeaf)
                 {
                     rightOrStart = newIndices.Count;
                     newIndices.AddRange(right.triangleIndices);
@@ -162,7 +162,7 @@ namespace P
                 GL.BindBuffer(BufferTarget.AtomicCounterBuffer, rayCounterBO);
                 GL.BufferData(BufferTarget.AtomicCounterBuffer, sizeof(uint) * 4, test, BufferUsageHint.StaticDraw);
                 GL.BindBufferBase(BufferRangeTarget.AtomicCounterBuffer, 4, rayCounterBO);
-                
+
                 GL.UseProgram(bvhIntersectionProgram);
                 GL.BindBuffer(BufferTarget.AtomicCounterBuffer, rayCounterBO);
                 GL.BindBufferBase(BufferRangeTarget.AtomicCounterBuffer, 4, rayCounterBO);
@@ -188,6 +188,11 @@ namespace P
             GL.BindTexture(TextureTarget.Texture2D, textureHandle);
             GL.ClearTexImage(textureHandle, 0, PixelFormat.Rgba, PixelType.Float, IntPtr.Zero);
             GL.UseProgram(generateProgram);
+            Matrix4 transformation = Matrix4.Identity;
+            transformation = Matrix4.CreateTranslation(new Vector3 (30,0,0));
+            transformation = Matrix4.CreateScale(new Vector3(4, 1, 1));
+            transformation = Matrix4.CreateRotationX(3.14f);
+            GL.UniformMatrix4(5, false,ref transformation);
 
             GL.Uniform3(GL.GetUniformLocation(generateProgram, "cameraOrigin"), Camera.getCameraPosition());
             Vector3 yRange = Camera.getCameraUp() * 2 * ((float)height / (float)width);
@@ -197,7 +202,7 @@ namespace P
 
             GL.BindBuffer(BufferTarget.AtomicCounterBuffer, rayCounterBO);
             GL.BufferData(BufferTarget.AtomicCounterBuffer, sizeof(uint) * 4, new uint[] { 0, (uint)(width * samplesSqrt * height * samplesSqrt), 0, 0 }, BufferUsageHint.StaticDraw);
- 
+
             int currentInBuffer = 0;
 
             GL.UseProgram(generateProgram);
@@ -325,7 +330,11 @@ namespace P
             Dispose(true);
             GC.SuppressFinalize(this);
         }
-    }
+
+        
+
+
+}
 
     unsafe struct GPUBVH
     {
@@ -388,5 +397,10 @@ namespace P
             rightOrStart = rightOrStartp;
             rightOrEnd = rightOrEndp;
         }
+
+        
+
     }
+
+    
 }

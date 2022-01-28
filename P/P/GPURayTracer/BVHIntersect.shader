@@ -19,6 +19,9 @@ layout(std430, binding = 1) buffer rayInBuffer
 	Ray rays[];
 };
 
+
+
+
 layout(std430, binding = 5) buffer vertexBufferObj
 {
 	float vertexBuffer[];
@@ -155,7 +158,10 @@ shared int stack[24 * 64];
 //#define GL_ARB_shader_group_vote          1
 #extension GL_ARB_shader_group_vote : enable
 
-void main() {
+void main() 
+{
+	
+
 	rayNum = atomicCounterIncrement(intersectionJob);
 	uint stackOffset = gl_LocalInvocationIndex * 24;
 
