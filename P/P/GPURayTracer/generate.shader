@@ -11,7 +11,7 @@ struct Ray
 	uint pixelY;
 	vec3 ambient;
 	int primID;
-	int ignore;
+	int matrixID;
 };
 
 layout(std430, binding = 1) buffer rayInBuffer
@@ -26,23 +26,15 @@ uniform vec3 p1 = vec3(-1.0, -1.0, 2.0);
 uniform vec3 xArm = vec3(2.0, 0.0, 0.0);
 uniform vec3 yArm = vec3(0.0, 2.0, 0.0);
 
-//transformation
-layout(location = 5) uniform mat4 transform ;
-
-
-
 void main() {
 	vec3 dir = normalize(
 		p1 +
 		xArm * (float(gl_GlobalInvocationID.x) / float(gl_NumWorkGroups.x * gl_WorkGroupSize.x)) +
 		yArm * (float(gl_GlobalInvocationID.y) / float(gl_NumWorkGroups.y * gl_WorkGroupSize.y))
 	);
-	//transformation
-	mat3 dir_matrix = transpose(inverse(mat3(transform)));
-	dir = normalize(dir_matrix * dir);
 
 	rays[atomicCounterIncrement(rayCountIn)] = Ray(
-		(transform*vec4(cameraOrigin,1)).xyz,
+		cameraOrigin,
 		dir,
 		1. / dir,
 		vec3(1.0),

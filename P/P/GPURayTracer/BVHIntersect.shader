@@ -11,16 +11,13 @@ struct Ray
 	uint pixelY;
 	vec3 ambient;
 	int primID;
-	int ignore;
+	int matrixID;
 };
 
 layout(std430, binding = 1) buffer rayInBuffer
 {
 	Ray rays[];
 };
-
-
-
 
 layout(std430, binding = 5) buffer vertexBufferObj
 {
@@ -154,14 +151,14 @@ layout(location = 1) uniform bool anyHit;
 int stackCount;
 shared int stack[24 * 64];
 
+layout(location = 5) uniform mat4 transform;
+
 //Stack stack;
 //#define GL_ARB_shader_group_vote          1
 #extension GL_ARB_shader_group_vote : enable
 
 void main() 
 {
-	
-
 	rayNum = atomicCounterIncrement(intersectionJob);
 	uint stackOffset = gl_LocalInvocationIndex * 24;
 
@@ -178,6 +175,11 @@ void main()
 		}
 		else {
 			ray = rays[rayNum];
+			//transformation
+			mat3 dir_matrix = transpose(inverse(mat3(transform)));
+			//ray.origin = (transform * vec4(ray.origin, 1)).xyz;
+			//ray.dir = normalize(dir_matrix * ray.dir);
+			//ray.dir = -ray.dir;
 		}
 
 		stack[stackOffset] = 0;
@@ -192,7 +194,6 @@ void main()
 
 		int loc = 0;
 		BVH bvh = bvhs[loc];
-
 		//Triangle ranges that have to be done (tiny stack)
 		int foundTris = 0;
 		int start1 = 0;
@@ -288,6 +289,7 @@ void main()
 				}
 			}
 		}
+
 		if (anyHit) {
 			shadowRays[rayNum] = ray;
 		}

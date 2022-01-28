@@ -11,7 +11,7 @@ struct Ray
 	uint pixelY;
 	vec3 ambient;
 	int primID;
-	int ignore;
+	int matrixID;
 };
 
 layout(std430, binding = 1) buffer rayInBuffer

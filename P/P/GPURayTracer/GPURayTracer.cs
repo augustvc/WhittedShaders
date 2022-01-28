@@ -188,11 +188,6 @@ namespace P
             GL.BindTexture(TextureTarget.Texture2D, textureHandle);
             GL.ClearTexImage(textureHandle, 0, PixelFormat.Rgba, PixelType.Float, IntPtr.Zero);
             GL.UseProgram(generateProgram);
-            Matrix4 transformation = Matrix4.Identity;
-            transformation = Matrix4.CreateTranslation(new Vector3 (30,0,0));
-            transformation = Matrix4.CreateScale(new Vector3(4, 1, 1));
-            transformation = Matrix4.CreateRotationX(3.14f);
-            GL.UniformMatrix4(5, false,ref transformation);
 
             GL.Uniform3(GL.GetUniformLocation(generateProgram, "cameraOrigin"), Camera.getCameraPosition());
             Vector3 yRange = Camera.getCameraUp() * 2 * ((float)height / (float)width);
@@ -219,6 +214,13 @@ namespace P
             totalGenRayTime += genSW.Elapsed.TotalMilliseconds;
             totalFrames++;
             //Console.WriteLine("Generating rays took " + genSW.ElapsedMilliseconds + " ms");
+
+            Matrix4 transformation = Matrix4.Identity;
+            //transformation = Matrix4.CreateTranslation(new Vector3(30, 0, 0));
+            //transformation = Matrix4.CreateScale(new Vector3(4, 1, 1));
+            //transformation = Matrix4.CreateRotationX(3.14f);
+            
+            GL.ProgramUniformMatrix4(bvhIntersectionProgram, 5, false, ref transformation);
 
             int maximumBounces = 8;
             for (int i = 0; i < maximumBounces; i++)
