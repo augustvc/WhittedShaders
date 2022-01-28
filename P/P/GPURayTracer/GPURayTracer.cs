@@ -141,6 +141,7 @@ namespace P
             GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 6, faceBO);
 
             Console.WriteLine("All nodes: " + allNodes.Count);
+            Console.WriteLine("All indices: " + newIndices.Count);
 
             GL.BindBuffer(BufferTarget.ShaderStorageBuffer, BVHBO);
             GL.BufferData(BufferTarget.ShaderStorageBuffer, 16 * 4 * allNodes.Count, allNodes.ToArray(), BufferUsageHint.StaticDraw);
@@ -168,9 +169,12 @@ namespace P
             }
         }
 
-        static public double totalShadowRayTime = 0.0;
+        static public double firstShadowRayTime = 0.0;
         static public double totalPrimaryRayFirstHitTime = 0.0;
+        static public double totalRayFirstHitTime = 0.0;
+        static public double totalShadowRayTime = 0.0;
         static public double totalGenRayTime= 0.0;
+        static public double totalBouncerTime = 0.0;
         static public int totalFrames = 0;
         public void GenTex(int width, int height)
         {
@@ -211,7 +215,7 @@ namespace P
             totalFrames++;
             //Console.WriteLine("Generating rays took " + genSW.ElapsedMilliseconds + " ms");
 
-            int maximumBounces = 1;
+            int maximumBounces = 8;
             for (int i = 0; i < maximumBounces; i++)
             {
                 //Reset the shadow ray counter
@@ -243,10 +247,14 @@ namespace P
                 {
                     totalPrimaryRayFirstHitTime += sw.Elapsed.TotalMilliseconds;
                 }
+                totalRayFirstHitTime += sw.Elapsed.TotalMilliseconds;
 
+                sw.Restart();
                 GL.UseProgram(bounceProgram);
                 GL.DispatchCompute(262144 / 64, 1, 1);
                 GL.Finish();
+                sw.Stop();
+                totalBouncerTime += sw.Elapsed.TotalMilliseconds;
 
                 sw.Restart();
                 GL.UseProgram(bvhIntersectionProgram);
@@ -256,8 +264,11 @@ namespace P
                 GL.DispatchCompute(8704 * 4 / 64, 1, 1);
                 GL.Finish();
                 sw.Stop();
+                if (i == 0)
+                {
+                    firstShadowRayTime += sw.Elapsed.TotalMilliseconds;
+                }
                 totalShadowRayTime += sw.Elapsed.TotalMilliseconds;
-
 
                 GL.UseProgram(shadingProgram);
                 GL.DispatchCompute(262144 / 64, 1, 1);

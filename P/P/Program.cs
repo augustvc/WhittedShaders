@@ -31,7 +31,7 @@ namespace P
             }
             using (Game game = new Game(1920, 1000, title))
             {
-                game.VSync = VSyncMode.Off;
+                //game.VSync = VSyncMode.Off;
                 game.Run(0.0, 0.0);
             }
         }
@@ -127,7 +127,10 @@ namespace P
                 Console.WriteLine("GPU average fps since launch: " + (GPUFrameCounter / totalGPUTime));
                 Console.WriteLine("GPU average ray generation execution time (ms): " + GPURayTracer.totalGenRayTime / GPURayTracer.totalFrames);
                 Console.WriteLine("GPU average primary ray firsthit shader execution time (ms): " + GPURayTracer.totalPrimaryRayFirstHitTime / GPURayTracer.totalFrames);
-                Console.WriteLine("GPU average shadow ray shader execution time per frame (ms): " + GPURayTracer.totalShadowRayTime / GPURayTracer.totalFrames);
+                Console.WriteLine("GPU average shadow ray shader execution time per frame (ms): " + GPURayTracer.firstShadowRayTime / GPURayTracer.totalFrames);
+                Console.WriteLine("GPU average TOTAL ray firsthit shader execution time (ms): " + GPURayTracer.totalRayFirstHitTime / GPURayTracer.totalFrames);
+                Console.WriteLine("GPU average TOTAL shadow ray shader execution time per frame (ms): " + GPURayTracer.totalShadowRayTime / GPURayTracer.totalFrames);
+                Console.WriteLine("GPU average TOTAL bounce shader execution time per frame (ms): " + GPURayTracer.totalBouncerTime / GPURayTracer.totalFrames);
                 renderCheckTime = renderCheckInterval;
             }
             

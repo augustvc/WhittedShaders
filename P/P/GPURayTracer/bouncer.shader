@@ -67,7 +67,7 @@ struct Triangle
 };
 
 vec3 lightPosition = vec3(0.0, 1200.0, 0.0);
-vec3 lightValue = vec3(600000.0, 600000.0, 600000.0);
+vec3 lightValue = vec3(2000000.0, 2000000.0, 2000000.0);
 
 Triangle triangles[] = Triangle[](
 	//  Triangle(vec3(0.0, 4.0, -3.0),vec3(-5.0, 4.0, 3.0), vec3(10.0, 4.0, 0.0), Material(vec3(0.0, 1.0, 0.0), 1.0, 0.0))
@@ -149,9 +149,10 @@ void main() {
 				v * vec3(vertexBuffer[normalsOffset + triCI * 3], vertexBuffer[normalsOffset + triCI * 3 + 1], vertexBuffer[normalsOffset + triCI * 3 + 2])
 			);
 
-			//normal = -normalize(cross(triC - triA, triB - triA));
-			//if (dot(rays[rayNum].dir, normal) > 0)
-				//normal = -normal;
+			//Real normal in the sense that, this is the one corresponding to the real triangle. The other one is just used for shading.
+			vec3 realNormal = -normalize(cross(triC - triA, triB - triA));
+			if (dot(rays[rayNum].dir, realNormal) > 0)
+				normal = vec3(0, 0, 0);
 		}
 		else if (primID >= 20000) {
 			mat = triangles[primID - 20000].mat;
@@ -169,23 +170,33 @@ void main() {
 			normal = normalize((rays[rayNum].origin + rays[rayNum].dir * rays[rayNum].t) - spheres[primID].position);
 		}
 
+		vec3 newOrigin = rays[rayNum].origin + rays[rayNum].dir * rays[rayNum].t + 0.0001 * normal;
+		
+		mat.specular = 0.4;
+		mat.diffuse = 0.6;
+
+		if (newOrigin.y < -49) {
+			mat  = Material(vec3(1, 0, 0), 0.2, 0.8);
+		}
+
 		if (mat.specular > 0.0) {
 			float ndotr = -dot(normal, rays[rayNum].dir);
-			raysOut[atomicCounterIncrement(rayCountOut)] = Ray(
-				rays[rayNum].origin + rays[rayNum].dir * rays[rayNum].t + normal * 0.0001,
-				rays[rayNum].dir + ndotr * 2 * normal,
-				1. / (rays[rayNum].dir + ndotr * 2 * normal),
-				rays[rayNum].energy * mat.specular,
-				100000, rays[rayNum].pixelX, rays[rayNum].pixelY,
-				vec3(0.0),
-				-1,
-				-1);
+			if (ndotr > 0) {
+				raysOut[atomicCounterIncrement(rayCountOut)] = Ray(
+					newOrigin,
+					rays[rayNum].dir + ndotr * 2 * normal,
+					1. / (rays[rayNum].dir + ndotr * 2 * normal),
+					rays[rayNum].energy * mat.specular * mat.color,
+					100000, rays[rayNum].pixelX, rays[rayNum].pixelY,
+					vec3(0.0),
+					-1,
+					-1);
+			}
 		}
 
 		if (mat.diffuse > 0.0) {
-			vec3 srOrigin = rays[rayNum].origin + rays[rayNum].dir * rays[rayNum].t + 0.0001 * normal;
-			float ndotl = max(dot(normalize(lightPosition - srOrigin), normal), 0);
-			float distSq = dot(lightPosition - srOrigin, lightPosition - srOrigin);
+			float ndotl = max(dot(normalize(lightPosition - newOrigin), normal), 0);
+			float distSq = dot(lightPosition - newOrigin, lightPosition - newOrigin);
 			vec3 finalLight = ndotl * (lightValue / distSq);
 			for (int i = 0; i < 3; i++) {
 				finalLight[i] += 0.05;
@@ -193,13 +204,13 @@ void main() {
 
 			vec3 diffuseEnergy = mat.diffuse * mat.color * finalLight;
 
-			vec3 srdir = normalize(lightPosition - srOrigin);
+			vec3 srdir = normalize(lightPosition - newOrigin);
 			Ray shadowRay = Ray(
-				srOrigin,
+				newOrigin,
 				srdir,
 				1. / srdir,
 				diffuseEnergy * rays[rayNum].energy,
-				length(lightPosition - srOrigin), rays[rayNum].pixelX, rays[rayNum].pixelY,
+				length(lightPosition - newOrigin), rays[rayNum].pixelX, rays[rayNum].pixelY,
 				mat.color * mat.diffuse * 0.05,
 				-1,
 				primID);
