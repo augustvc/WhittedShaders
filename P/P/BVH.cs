@@ -31,8 +31,8 @@ namespace P
             this.vertices = vertices;
             TopBVH = new BVH(vertices, indices);
 
-            SlowSplit(TopBVH);
-            //RecursiveSplit(TopBVH, 8);
+            //SlowSplit(TopBVH);
+            RecursiveSplit(TopBVH, 8);
             Console.WriteLine("leftchild of root: " + TopBVH.leftChild.SAH);
             Console.WriteLine("rightchild of root: " + TopBVH.rightChild.SAH);
 

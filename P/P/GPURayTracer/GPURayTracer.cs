@@ -176,6 +176,7 @@ namespace P
         static public double totalGenRayTime= 0.0;
         static public double totalBouncerTime = 0.0;
         static public int totalFrames = 0;
+
         public void GenTex(int width, int height)
         {
             if (width != this.width || height != this.height)
@@ -216,11 +217,15 @@ namespace P
             //Console.WriteLine("Generating rays took " + genSW.ElapsedMilliseconds + " ms");
 
             Matrix4 transformation = Matrix4.Identity;
-            //transformation = Matrix4.CreateTranslation(new Vector3(30, 0, 0));
-            //transformation = Matrix4.CreateScale(new Vector3(4, 1, 1));
-            //transformation = Matrix4.CreateRotationX(3.14f);
+            //transformation = Matrix4.CreateTranslation(new Vector3(30, 0, 10));
+            //transformation *= Matrix4.CreateScale(0.1f, 1f, 1f);
+            //transformation = Matrix4.CreateScale(new Vector3(1, 1, 1));
+            //transformation = Matrix4.CreateRotationY(3.141592f * 0.5f);
+            
+            transformation = Matrix4.CreateRotationX(totalFrames * 0.001f);
             
             GL.ProgramUniformMatrix4(bvhIntersectionProgram, 5, false, ref transformation);
+            GL.ProgramUniformMatrix4(bounceProgram, 5, false, ref transformation);
 
             int maximumBounces = 8;
             for (int i = 0; i < maximumBounces; i++)

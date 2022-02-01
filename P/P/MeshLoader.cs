@@ -16,13 +16,13 @@ namespace P
         public static void Init()
         {
             float[] hardcodedTriangles = new float[]{
-                -300f, -50f, -300f,
+               /* -300f, -50f, -300f,
                 -300f, -50f, 300f,
                 300f, -50f, -300f,
 
                 300f, -50f, 300f,
                 300f, -50f, -300f,
-                -300f, -50f, 300f
+                -300f, -50f, 300f*/
             };
 
             AssimpContext assimpContext = new AssimpContext();

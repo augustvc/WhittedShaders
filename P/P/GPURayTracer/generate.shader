@@ -32,7 +32,7 @@ void main() {
 		xArm * (float(gl_GlobalInvocationID.x) / float(gl_NumWorkGroups.x * gl_WorkGroupSize.x)) +
 		yArm * (float(gl_GlobalInvocationID.y) / float(gl_NumWorkGroups.y * gl_WorkGroupSize.y))
 	);
-
+	
 	rays[atomicCounterIncrement(rayCountIn)] = Ray(
 		cameraOrigin,
 		dir,

@@ -172,15 +172,19 @@ void main()
 	while (rayNum < maxRays) {
 		if (anyHit) {
 			ray = shadowRays[rayNum];
-		}
-		else {
+		} else {
 			ray = rays[rayNum];
-			//transformation
-			mat3 dir_matrix = transpose(inverse(mat3(transform)));
-			//ray.origin = (transform * vec4(ray.origin, 1)).xyz;
-			//ray.dir = normalize(dir_matrix * ray.dir);
-			//ray.dir = -ray.dir;
 		}
+
+		vec3 oldOrigin = ray.origin;
+		vec3 oldDir = ray.dir;
+		//transformation
+		mat3 dir_matrix = inverse(mat3(transform));
+		ray.origin = (inverse(transform) * vec4(ray.origin, 1)).xyz;
+		ray.dir = (dir_matrix * ray.dir);
+		//ray.origin.y = -ray.origin.y;
+		//ray.dir.y = -ray.dir.y;
+		ray.invdir = 1. / ray.dir;
 
 		stack[stackOffset] = 0;
 		stackCount = 1;
@@ -289,6 +293,9 @@ void main()
 				}
 			}
 		}
+
+		ray.origin = oldOrigin;
+		ray.dir = oldDir;
 
 		if (anyHit) {
 			shadowRays[rayNum] = ray;

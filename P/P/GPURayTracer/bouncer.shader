@@ -103,6 +103,8 @@ layout(binding = 4, offset = 12) uniform atomic_uint intersectionJob;
 
 layout(location = 2) uniform int normalsOffset;
 
+layout(location = 5) uniform mat4 transform;
+
 void main() {
 	uint rayNum;
 	uint totalRays = atomicCounter(rayCountIn);
@@ -130,6 +132,15 @@ void main() {
 			vec3 triA = vec3(vertexBuffer[triAI * 3], vertexBuffer[triAI * 3 + 1], vertexBuffer[triAI * 3 + 2]);
 			vec3 triB = vec3(vertexBuffer[triBI * 3], vertexBuffer[triBI * 3 + 1], vertexBuffer[triBI * 3 + 2]);
 			vec3 triC = vec3(vertexBuffer[triCI * 3], vertexBuffer[triCI * 3 + 1], vertexBuffer[triCI * 3 + 2]);
+
+			triA = (transform * vec4(triA, 1)).xyz;
+			triB = (transform * vec4(triB, 1)).xyz;
+			triC = (transform * vec4(triC, 1)).xyz;
+
+			//triA.y = -triA.y;
+			//triB.y = -triB.y;
+			//triC.y = -triC.y;
+			
 			vec3 ab = triB - triA;
 			vec3 ac = triC - triA;
 
@@ -149,10 +160,24 @@ void main() {
 				v * vec3(vertexBuffer[normalsOffset + triCI * 3], vertexBuffer[normalsOffset + triCI * 3 + 1], vertexBuffer[normalsOffset + triCI * 3 + 2])
 			);
 
+			mat3 dir_matrix = transpose(inverse(mat3(transform)));
+			normal = normalize(dir_matrix * normal);
+
+
+			//normal.y = -normal.y;
+			//normal.y *= 0.5;
+			//normal = normalize(normal);
+			
+			//normal.y = -normal.y;
 			//Real normal in the sense that, this is the one corresponding to the real triangle. The other one is just used for shading.
-			vec3 realNormal = -normalize(cross(triC - triA, triB - triA));
-			if (dot(rays[rayNum].dir, realNormal) > 0)
-				normal = vec3(0, 0, 0);
+			//vec3 realNormal = -normalize(cross(triC - triA, triB - triA));
+			//realNormal.y = -realNormal.y;
+			//if (dot(rays[rayNum].dir, realNormal) > 0)
+				//normal = vec3(0, 0, 0);
+
+			//rays[rayNum].dir.y = -rays[rayNum].dir.y;
+			//rays[rayNum].origin.y = -rays[rayNum].origin.y;
+			//rays[rayNum].invdir = 1. / rays[rayNum].dir;
 		}
 		else if (primID >= 20000) {
 			mat = triangles[primID - 20000].mat;
@@ -176,7 +201,7 @@ void main() {
 		mat.diffuse = 0.6;
 
 		if (newOrigin.y < -49) {
-			mat  = Material(vec3(1, 0, 0), 0.2, 0.8);
+			//mat  = Material(vec3(1, 0, 0), 0.2, 0.8);
 		}
 
 		if (mat.specular > 0.0) {
