@@ -108,6 +108,14 @@ public static class Camera
                 dt = 0.3;
             cameraSpeed *= 1 - (float)dt;
         }
+        if(input.IsKeyDown(Key.Plus))
+        {
+            P.GPURayTracer.changeSamplesSqrt(1);
+        }
+        if (input.IsKeyDown(Key.Minus))
+        {
+            P.GPURayTracer.changeSamplesSqrt(-1);
+        }
     }
 
     static float prevX;

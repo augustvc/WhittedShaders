@@ -11,7 +11,7 @@ struct Ray
 	uint pixelY;
 	vec3 ambient;
 	int primID;
-	int matrixID;
+	uint matrixID;
 };
 
 layout(std430, binding = 1) buffer rayInBuffer
@@ -39,10 +39,11 @@ layout(std430, binding = 6) buffer indexBufferObj
 	uint indexBuffer[];
 };
 
-
 struct Material
 {
-	vec3 color;
+	float r;
+	float g;
+	float b;
 	float diffuse;
 	float specular;
 };
@@ -69,22 +70,6 @@ struct Triangle
 vec3 lightPosition = vec3(0.0, 1200.0, 0.0);
 vec3 lightValue = vec3(2000000.0, 2000000.0, 2000000.0);
 
-Triangle triangles[] = Triangle[](
-	//  Triangle(vec3(0.0, 4.0, -3.0),vec3(-5.0, 4.0, 3.0), vec3(10.0, 4.0, 0.0), Material(vec3(0.0, 1.0, 0.0), 1.0, 0.0))
-	Triangle(vec3(10.0, 0.0, 5.0), vec3(10.0, 4.0, 5.0), vec3(10.0, 0.0, 10.0), Material(vec3(0.0, 1.0, 0.0), 0.01, 0.99))
-	);
-
-Sphere spheres[] = Sphere[](
-	Sphere(vec3(-3.0, -1.5, 12.0), Material(vec3(1.0, 0.0, 0.0), 1.0, 0.0), 1.5 * 1.5)
-	, Sphere(vec3(3.0, -1.5, 12.0), Material(vec3(1.0, 0.0, 1.0), 1.0, 0.0), 1.5 * 1.5)
-	, Sphere(vec3(0.0, -1.5, 9.0), Material(vec3(1.0, 1.0, 0.0), 1.0, 0.0), 1.5 * 1.5)
-	, Sphere(vec3(0.0, 4, 24.0), Material(vec3(0.0, 0.0, 0.0), 0.0, 1.0), 18)
-	, Sphere(vec3(0.0, 6.5, 16.0), Material(vec3(0.0, 0.0, 0.0), 0.0, 1.0), 2)
-	, Sphere(vec3(0.0, 12.5, 16.0), Material(vec3(0.0, 0.0, 0.0), 0.0, 1.0), 2)
-	, Sphere(vec3(-5000.0, 0, 0), Material(vec3(0.0, 0.0, 0.0), 0.04, 0.96), 4994 * 4994)
-	);
-
-
 struct Plane
 {
 	vec3 normal;
@@ -93,7 +78,7 @@ struct Plane
 };
 
 Plane planes[] = Plane[](
-	Plane(vec3(0.0, 1.0, 0.0), -3.0, Material(vec3(1.0, 1.0, 1.0), 1.0, 0.0))
+	Plane(vec3(0.0, 1.0, 0.0), -3.0, Material(1.0, 1.0, 1.0, 1.0, 0.0))
 	);
 
 layout(binding = 4) uniform atomic_uint rayCountIn;
@@ -104,6 +89,16 @@ layout(binding = 4, offset = 12) uniform atomic_uint intersectionJob;
 layout(location = 2) uniform int normalsOffset;
 
 layout(location = 5) uniform mat4 transform;
+
+layout(std430, binding = 8) buffer MatrixBuffer
+{
+	mat4 matrices[];
+};
+
+layout(std430, binding = 9) buffer MaterialBuffer
+{
+	Material materials[];
+};
 
 void main() {
 	uint rayNum;
@@ -120,11 +115,11 @@ void main() {
 		}
 
 		vec3 normal = vec3(0.0);
-		Material mat = Material(vec3(0.0), 1.0, 0.0);
+		Material mat = Material(0.0, 0.0, 0.0, 1.0, 0.0);
 		if (primID >= 30000) {
 			//Triangle from a mesh
 			primID -= 30000;
-			mat = Material(vec3(1.0), 1.0, 0.0);
+			mat = materials[rays[rayNum].matrixID];
 			uint triAI = indexBuffer[primID++];
 			uint triBI = indexBuffer[primID++];
 			uint triCI = indexBuffer[primID++];
@@ -133,9 +128,9 @@ void main() {
 			vec3 triB = vec3(vertexBuffer[triBI * 3], vertexBuffer[triBI * 3 + 1], vertexBuffer[triBI * 3 + 2]);
 			vec3 triC = vec3(vertexBuffer[triCI * 3], vertexBuffer[triCI * 3 + 1], vertexBuffer[triCI * 3 + 2]);
 
-			triA = (transform * vec4(triA, 1)).xyz;
-			triB = (transform * vec4(triB, 1)).xyz;
-			triC = (transform * vec4(triC, 1)).xyz;
+			triA = (matrices[rays[rayNum].matrixID] * vec4(triA, 1)).xyz;
+			triB = (matrices[rays[rayNum].matrixID] * vec4(triB, 1)).xyz;
+			triC = (matrices[rays[rayNum].matrixID] * vec4(triC, 1)).xyz;
 
 			//triA.y = -triA.y;
 			//triB.y = -triB.y;
@@ -160,7 +155,7 @@ void main() {
 				v * vec3(vertexBuffer[normalsOffset + triCI * 3], vertexBuffer[normalsOffset + triCI * 3 + 1], vertexBuffer[normalsOffset + triCI * 3 + 2])
 			);
 
-			mat3 dir_matrix = transpose(inverse(mat3(transform)));
+			mat3 dir_matrix = transpose(inverse(mat3(matrices[rays[rayNum].matrixID])));
 			normal = normalize(dir_matrix * normal);
 
 
@@ -179,31 +174,9 @@ void main() {
 			//rays[rayNum].origin.y = -rays[rayNum].origin.y;
 			//rays[rayNum].invdir = 1. / rays[rayNum].dir;
 		}
-		else if (primID >= 20000) {
-			mat = triangles[primID - 20000].mat;
-			Triangle tri = triangles[primID - 20000];
-			normal = normalize(cross(tri.b - tri.a, tri.c - tri.a));
-			if (dot(rays[rayNum].dir, normal) > 0)
-				normal = -normal;
-		}
-		else if (primID >= 10000) {
-			mat = planes[primID - 10000].mat;
-			normal = planes[primID - 10000].normal;
-		}
-		else {
-			mat = spheres[primID].mat;
-			normal = normalize((rays[rayNum].origin + rays[rayNum].dir * rays[rayNum].t) - spheres[primID].position);
-		}
 
-		vec3 newOrigin = rays[rayNum].origin + rays[rayNum].dir * rays[rayNum].t + 0.0001 * normal;
+		vec3 newOrigin = rays[rayNum].origin + rays[rayNum].dir * rays[rayNum].t + 0.005 * normal;
 		
-		mat.specular = 0.4;
-		mat.diffuse = 0.6;
-
-		if (newOrigin.y < -49) {
-			//mat  = Material(vec3(1, 0, 0), 0.2, 0.8);
-		}
-
 		if (mat.specular > 0.0) {
 			float ndotr = -dot(normal, rays[rayNum].dir);
 			if (ndotr > 0) {
@@ -211,7 +184,7 @@ void main() {
 					newOrigin,
 					rays[rayNum].dir + ndotr * 2 * normal,
 					1. / (rays[rayNum].dir + ndotr * 2 * normal),
-					rays[rayNum].energy * mat.specular * mat.color,
+					rays[rayNum].energy * mat.specular * vec3(mat.r, mat.g, mat.b),
 					100000, rays[rayNum].pixelX, rays[rayNum].pixelY,
 					vec3(0.0),
 					-1,
@@ -227,7 +200,7 @@ void main() {
 				finalLight[i] += 0.05;
 			}
 
-			vec3 diffuseEnergy = mat.diffuse * mat.color * finalLight;
+			vec3 diffuseEnergy = mat.diffuse * vec3(mat.r, mat.g, mat.b) * finalLight;
 
 			vec3 srdir = normalize(lightPosition - newOrigin);
 			Ray shadowRay = Ray(
@@ -236,7 +209,7 @@ void main() {
 				1. / srdir,
 				diffuseEnergy * rays[rayNum].energy,
 				length(lightPosition - newOrigin), rays[rayNum].pixelX, rays[rayNum].pixelY,
-				mat.color * mat.diffuse * 0.05,
+				vec3(mat.r, mat.g, mat.b) * mat.diffuse * 0.05,
 				-1,
 				primID);
 			shadowRays[atomicCounterIncrement(shadowRayCount)] = shadowRay;
