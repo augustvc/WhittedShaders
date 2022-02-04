@@ -67,7 +67,6 @@ namespace P
             MeshLoader.Init();
 
             Mesh loadedObj = new Mesh(MeshLoader.vertices, MeshLoader.indices);
-            Mesh tree = MeshGenerator.TreeGenerator.GenerateTree();
 
             Mesh usedMesh = loadedObj;
 

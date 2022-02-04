@@ -59,7 +59,6 @@
     <Compile Include="Light.cs" />
     <Compile Include="Material.cs" />
     <Compile Include="Mesh.cs" />
-    <Compile Include="MeshGenerator\TreeGenerator.cs" />
     <Compile Include="MeshLoader.cs" />
     <Compile Include="Plane.cs" />
     <Compile Include="Primitive.cs" />

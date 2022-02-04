@@ -19,6 +19,8 @@ namespace P
         int shadingProgram;
         int[] raySSBOs = { -1, -1 };
         int shadowRaySSBO = -1;
+        int matricesSSBO = -1;
+        int materialsSSBO = -1;
         int rayCounterBO = -1;
         int vertexBO = -1;
         int BVHBO = -1;
@@ -27,6 +29,7 @@ namespace P
         int height = 1;
         int textureHandle = -1;
         int samplesSqrt = 1;
+        static int newSamplesSqrt = 1;
 
         public GPURayTracer()
         {
@@ -36,6 +39,19 @@ namespace P
             shadingProgram = Shader.CreateComputeShaderProgram("#version 430", new string[] { "GPURayTracer/shading.shader" });
 
             SetupRayBuffers(width, height);
+        }
+        
+        public static void changeSamplesSqrt(int change)
+        {
+            newSamplesSqrt += change;
+            if(newSamplesSqrt < 1)
+            {
+                newSamplesSqrt = 1;
+            }
+            if(newSamplesSqrt > 3)
+            {
+                newSamplesSqrt = 3;
+            }
         }
 
         void SetupRayBuffers(int width, int height)
@@ -52,6 +68,9 @@ namespace P
                     (1 + width * height * samplesSqrt * samplesSqrt) * (Vector4.SizeInBytes * 14), IntPtr.Zero, BufferUsageHint.StaticDraw);
                 GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 1 + i, raySSBOs[i]);
             }
+
+            matricesSSBO = GL.GenBuffer();
+            materialsSSBO = GL.GenBuffer();
 
             GL.UseProgram(shadingProgram);
 
@@ -143,6 +162,13 @@ namespace P
             Console.WriteLine("All nodes: " + allNodes.Count);
             Console.WriteLine("All indices: " + newIndices.Count);
 
+            int treeRoot = allNodes.Count;
+            Vector3 aabbmin = new Vector3(float.MaxValue);
+            Vector3 aabbmax = new Vector3(float.MinValue);
+
+            GL.ProgramUniform1(bvhIntersectionProgram, 3, treeRoot);
+            allNodes.Add(new GPUBVH(aabbmin, aabbmax, new Vector3(float.MaxValue), new Vector3(float.MinValue), 0, -1, 0, 0));
+
             GL.BindBuffer(BufferTarget.ShaderStorageBuffer, BVHBO);
             GL.BufferData(BufferTarget.ShaderStorageBuffer, 16 * 4 * allNodes.Count, allNodes.ToArray(), BufferUsageHint.StaticDraw);
             GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 7, BVHBO);
@@ -179,6 +205,11 @@ namespace P
 
         public void GenTex(int width, int height)
         {
+            if(samplesSqrt != newSamplesSqrt)
+            {
+                samplesSqrt = newSamplesSqrt;
+                SetupRayBuffers(width, height);
+            }
             if (width != this.width || height != this.height)
             {
                 SetupRayBuffers(width, height);
@@ -216,16 +247,31 @@ namespace P
             totalFrames++;
             //Console.WriteLine("Generating rays took " + genSW.ElapsedMilliseconds + " ms");
 
-            Matrix4 transformation = Matrix4.Identity;
-            //transformation = Matrix4.CreateTranslation(new Vector3(30, 0, 10));
-            //transformation *= Matrix4.CreateScale(0.1f, 1f, 1f);
-            //transformation = Matrix4.CreateScale(new Vector3(1, 1, 1));
-            //transformation = Matrix4.CreateRotationY(3.141592f * 0.5f);
-            
-            transformation = Matrix4.CreateRotationX(totalFrames * 0.001f);
-            
-            GL.ProgramUniformMatrix4(bvhIntersectionProgram, 5, false, ref transformation);
-            GL.ProgramUniformMatrix4(bounceProgram, 5, false, ref transformation);
+            List<Matrix4> finalMatrices = new List<Matrix4>();
+
+            List<GPUMaterial> finalMaterials = new List<GPUMaterial>();
+
+            Random rnd = new Random(0);
+            for (int j = 0; j < 30; j++)
+            {
+                for (int i = 1; i <= 30; i++)
+                {
+                    finalMatrices.Add(Matrix4.CreateRotationY(-0.5f * 3.141592f) * Matrix4.CreateTranslation(i * 100, 0, j * 200) * Matrix4.CreateRotationX(totalFrames * 0.0001f * i));
+                    float specular = rnd.Next(0, 2) * 0.8f;
+                    finalMaterials.Add(new GPUMaterial(1f - (j / 30f), 1f - (i / 30f), 1, 0.8f, 0.2f));
+                }
+            }
+
+            //Send the transformation matrices for the objects to the gpu:
+            GL.UseProgram(bvhIntersectionProgram);
+            GL.BindBuffer(BufferTarget.ShaderStorageBuffer, matricesSSBO);
+            GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 8, matricesSSBO);
+            GL.BufferData(BufferTarget.ShaderStorageBuffer, finalMatrices.Count * 16 * sizeof(float), finalMatrices.ToArray(), BufferUsageHint.StaticDraw);
+
+            GL.UseProgram(bounceProgram);
+            GL.BindBuffer(BufferTarget.ShaderStorageBuffer, materialsSSBO);
+            GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 9, materialsSSBO);
+            GL.BufferData(BufferTarget.ShaderStorageBuffer, finalMaterials.Count * sizeof(float) * 5, finalMaterials.ToArray(), BufferUsageHint.StaticDraw);
 
             int maximumBounces = 8;
             for (int i = 0; i < maximumBounces; i++)
@@ -329,6 +375,8 @@ namespace P
                 GL.DeleteBuffer(raySSBOs[i]);
             }
             GL.DeleteBuffer(shadowRaySSBO);
+            GL.DeleteBuffer(matricesSSBO);
+            GL.DeleteBuffer(materialsSSBO);
             GL.DeleteBuffer(rayCounterBO);
             GL.DeleteBuffer(vertexBO);
             GL.DeleteBuffer(BVHBO);
@@ -342,6 +390,21 @@ namespace P
 
 
 }
+
+    struct GPUMaterial
+    {
+        float red;
+        float green;
+        float blue;
+        float diffuse;
+        float specular;
+        public GPUMaterial(float r, float g, float b, float diff, float spec)
+        {
+            red = r; green = g; blue = b;
+            diffuse = diff;
+            specular = spec;
+        }
+    }
 
     unsafe struct GPUBVH
     {
