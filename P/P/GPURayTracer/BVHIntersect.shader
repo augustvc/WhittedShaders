@@ -60,7 +60,9 @@ struct BVH
 
 	int rightOrStart;
 	int rightOrEnd;
-};
+}; //If leftOrEnd is negative, it points to a matrix, and leftOrStart points to a bvh. Same logic with the right side.
+//If leftOrStart is equal to leftOrEnd, they both point to a bvh as well.
+//In the other cases, leftOrEnd is positive and so is leftOrStart. And from start to end is the range of triangles they point to, it is a leaf node.
 
 layout(std430, binding = 8) buffer MatrixBuffer
 {
@@ -154,10 +156,11 @@ void doTris(int start, int end) {
 
 
 layout(location = 1) uniform bool anyHit;
-layout(location = 3) uniform uint treeRoot;
+layout(location = 3) uniform int treeRoot;
 
 int stackCount;
-shared int stack[24 * 64];
+shared int stack[32 * 64];
+int restoreAt;
 
 //Stack stack;
 //#define GL_ARB_shader_group_vote          1
@@ -166,7 +169,7 @@ shared int stack[24 * 64];
 void main() 
 {
 	rayNum = atomicCounterIncrement(intersectionJob);
-	uint stackOffset = gl_LocalInvocationIndex * 24;
+	uint stackOffset = gl_LocalInvocationIndex * 32;
 
 	uint maxRays = 0;
 	if (anyHit) {
@@ -182,131 +185,175 @@ void main()
 			ray = rays[rayNum];
 		}
 
-		for (uint i = 0; i < 900; i++) {
-			matrixNum = i;
-			vec3 oldOrigin = ray.origin;
-			vec3 oldDir = ray.dir;
-			//transformation
-			mat3 dir_matrix = inverse(mat3(matrices[i]));
-			ray.origin = (inverse(matrices[i]) * vec4(ray.origin, 1)).xyz;
-			ray.dir = (dir_matrix * ray.dir);
+		matrixNum = 0;
 
-			ray.invdir = 1. / ray.dir;
+		vec3 oldOrigin = ray.origin;
+		vec3 oldDir = ray.dir;
+		//transformation
+		//mat3 dir_matrix = inverse(mat3(matrices[matrixNum]));
+		//ray.origin = (inverse(matrices[matrixNum]) * vec4(ray.origin, 1)).xyz;
+		//ray.dir = (dir_matrix * ray.dir);
 
-			stack[stackOffset] = 0;
-			stackCount = 1;
+		//ray.invdir = 1. / ray.dir;
 
-			int lowX = ray.dir.x > 0f ? 3 : 0;
-			int lowY = ray.dir.y > 0f ? 4 : 1;
-			int lowZ = ray.dir.z > 0f ? 5 : 2;
-			int highX = ray.dir.x > 0f ? 0 : 3;
-			int highY = ray.dir.y > 0f ? 1 : 4;
-			int highZ = ray.dir.z > 0f ? 2 : 5;
+		stack[stackOffset] = treeRoot;
+		stackCount = 1;
 
-			int loc = 0;
-			BVH bvh = bvhs[loc];
-			//Triangle ranges that have to be done (tiny stack)
-			int foundTris = 0;
-			int start1 = 0;
-			int start2 = 0;
-			int start3 = 0;
-			int end1 = 0;
-			int end2 = 0;
-			int end3 = 0;
+		int lowX = ray.dir.x > 0f ? 3 : 0;
+		int lowY = ray.dir.y > 0f ? 4 : 1;
+		int lowZ = ray.dir.z > 0f ? 5 : 2;
+		int highX = ray.dir.x > 0f ? 0 : 3;
+		int highY = ray.dir.y > 0f ? 1 : 4;
+		int highZ = ray.dir.z > 0f ? 2 : 5;
 
-			while (true) {
-				if (stackCount <= 0 && foundTris <= 0) {
-					foundTris = 3;
-					break;
-				}
-				while (stackCount > 0 && foundTris < 2 && (!allInvocationsARB(foundTris > 0))) {
-					stackCount--;
-					loc = stack[stackOffset + stackCount];
+		int loc = treeRoot;
+		BVH bvh = bvhs[loc];
+		//Triangle ranges that have to be done (tiny stack)
+		int foundTris = 0;
+		int start1 = 0;
+		int start2 = 0;
+		int start3 = 0;
+		int end1 = 0;
+		int end2 = 0;
+		int end3 = 0;
 
-					float leftDist = rayAABB(bvhs[loc].AABBs[lowX], bvhs[loc].AABBs[lowY], bvhs[loc].AABBs[lowZ], bvhs[loc].AABBs[highX], bvhs[loc].AABBs[highY], bvhs[loc].AABBs[highZ]);
-					float rightDist = rayAABB(bvhs[loc].AABBs[lowX + 6], bvhs[loc].AABBs[lowY + 6], bvhs[loc].AABBs[lowZ + 6], bvhs[loc].AABBs[highX + 6], bvhs[loc].AABBs[highY + 6], bvhs[loc].AABBs[highZ + 6]);
+		restoreAt = -1;
 
-					bvh = bvhs[loc];
-					if (leftDist > rightDist) {
-						int tempI = bvh.leftOrStart;
-						bvh.leftOrStart = bvh.rightOrStart;
-						bvh.rightOrStart = tempI;
-
-						tempI = bvh.leftOrEnd;
-						bvh.leftOrEnd = bvh.rightOrEnd;
-						bvh.rightOrEnd = tempI;
-
-						float tempF = leftDist;
-						leftDist = rightDist;
-						rightDist = tempF;
-					}
-
-					//Add left later, so it will get popped first.
-					if (rightDist >= 0f && rightDist < ray.t) {
-						if (bvh.rightOrStart != bvh.rightOrEnd) {
-							if (foundTris == 1) {
-								start2 = bvh.rightOrStart;
-								end2 = bvh.rightOrEnd;
-							}
-							else {
-								start1 = bvh.rightOrStart;
-								end1 = bvh.rightOrEnd;
-							}
-							foundTris++;
-						}
-						else {
-							stack[stackOffset + stackCount] = bvh.rightOrStart;
-							stackCount++;
-						}
-					}
-					if (leftDist >= 0f && leftDist < ray.t) {
-						if (bvh.leftOrStart != bvh.leftOrEnd) {
-							if (foundTris == 2) {
-								start3 = bvh.leftOrStart;
-								end3 = bvh.leftOrEnd;
-							}
-							else if (foundTris == 1) {
-								start2 = bvh.leftOrStart;
-								end2 = bvh.leftOrEnd;
-							}
-							else {
-								start1 = bvh.leftOrStart;
-								end1 = bvh.leftOrEnd;
-							}
-							foundTris++;
-						}
-						else {
-							stack[stackOffset + stackCount] = bvh.leftOrStart;
-							stackCount++;
-						}
-					}
-				}
-				if (foundTris < 1) {
-					//Slightly faster doing this currently, but not necessary.
-					foundTris = 3;
-					break;
-				}
-				if (foundTris == 2) {
-					start3 = start2;
-					end3 = end2;
-				}
-				if (foundTris == 1) {
-					start3 = start1;
-					end3 = end1;
-				}
-
-				doTris(start3, end3);
-				foundTris--;
-				if (anyHit) {
-					if (ray.primID >= 0) {
+		while (true) {
+			if (stackCount <= 0 && foundTris <= 0) {
+				foundTris = 3;
+				break;
+			}
+			while (stackCount > 0 && foundTris < 2 && (!allInvocationsARB(foundTris > 0))) {
+				stackCount--;
+				loc = stack[stackOffset + stackCount];
+				if (stackCount == restoreAt) {
+					if (foundTris > 0) {
+						stackCount++;
 						break;
+					}
+
+					ray.origin = oldOrigin;
+					ray.dir = oldDir;
+
+					ray.invdir = 1. / ray.dir;
+
+					lowX = ray.dir.x > 0f ? 3 : 0;
+					lowY = ray.dir.y > 0f ? 4 : 1;
+					lowZ = ray.dir.z > 0f ? 5 : 2;
+					highX = ray.dir.x > 0f ? 0 : 3;
+					highY = ray.dir.y > 0f ? 1 : 4;
+					highZ = ray.dir.z > 0f ? 2 : 5;
+					restoreAt = -1;
+				}
+
+				if (bvhs[loc].leftOrEnd < 0) {
+					restoreAt = stackCount - 1;
+
+					matrixNum = -(bvhs[loc].leftOrEnd + 1);
+
+					oldOrigin = ray.origin;
+					oldDir = ray.dir;
+
+					mat3 dir_matrix = inverse(mat3(matrices[matrixNum]));
+					ray.origin = (inverse(matrices[matrixNum]) * vec4(ray.origin, 1)).xyz;
+					ray.dir = dir_matrix * ray.dir;
+
+					ray.invdir = 1. / ray.dir;
+
+					lowX = ray.dir.x > 0f ? 3 : 0;
+					lowY = ray.dir.y > 0f ? 4 : 1;
+					lowZ = ray.dir.z > 0f ? 5 : 2;
+					highX = ray.dir.x > 0f ? 0 : 3;
+					highY = ray.dir.y > 0f ? 1 : 4;
+					highZ = ray.dir.z > 0f ? 2 : 5;
+				}
+
+				float leftDist = rayAABB(bvhs[loc].AABBs[lowX], bvhs[loc].AABBs[lowY], bvhs[loc].AABBs[lowZ], bvhs[loc].AABBs[highX], bvhs[loc].AABBs[highY], bvhs[loc].AABBs[highZ]);
+				float rightDist = rayAABB(bvhs[loc].AABBs[lowX + 6], bvhs[loc].AABBs[lowY + 6], bvhs[loc].AABBs[lowZ + 6], bvhs[loc].AABBs[highX + 6], bvhs[loc].AABBs[highY + 6], bvhs[loc].AABBs[highZ + 6]);
+
+				bvh = bvhs[loc];
+				if (leftDist > rightDist) {
+					int tempI = bvh.leftOrStart;
+					bvh.leftOrStart = bvh.rightOrStart;
+					bvh.rightOrStart = tempI;
+
+					tempI = bvh.leftOrEnd;
+					bvh.leftOrEnd = bvh.rightOrEnd;
+					bvh.rightOrEnd = tempI;
+
+					float tempF = leftDist;
+					leftDist = rightDist;
+					rightDist = tempF;
+				}
+
+				//Add left later, so it will get popped first.
+				if (rightDist >= 0f && rightDist < ray.t) {
+					if (bvh.rightOrStart != bvh.rightOrEnd && (bvh.rightOrEnd >= 0)) {
+						if (foundTris == 1) {
+							start2 = bvh.rightOrStart;
+							end2 = bvh.rightOrEnd;
+						}
+						else {
+							start1 = bvh.rightOrStart;
+							end1 = bvh.rightOrEnd;
+						}
+						foundTris++;
+					}
+					else {
+						stack[stackOffset + stackCount] = bvh.rightOrStart;
+						stackCount++;
+					}
+				}
+				if (leftDist >= 0f && leftDist < ray.t) {
+					if (bvh.leftOrStart != bvh.leftOrEnd && (bvh.leftOrEnd >= 0)) {
+						if (foundTris == 2) {
+							start3 = bvh.leftOrStart;
+							end3 = bvh.leftOrEnd;
+						}
+						else if (foundTris == 1) {
+							start2 = bvh.leftOrStart;
+							end2 = bvh.leftOrEnd;
+						}
+						else {
+							start1 = bvh.leftOrStart;
+							end1 = bvh.leftOrEnd;
+						}
+						foundTris++;
+					}
+					else {
+						stack[stackOffset + stackCount] = bvh.leftOrStart;
+						stackCount++;
 					}
 				}
 			}
 
-			ray.origin = oldOrigin;
-			ray.dir = oldDir;
+			if (foundTris < 1) {
+				//Slightly faster doing this currently, but not necessary.
+				foundTris = 3;
+				break;
+			}
+			if (foundTris == 2) {
+				start3 = start2;
+				end3 = end2;
+			}
+			if (foundTris == 1) {
+				start3 = start1;
+				end3 = end1;
+			}
+
+			doTris(start3, end3);
+			foundTris--;
+
+			if (anyHit) {
+				if (ray.primID >= 0) {
+					break;
+				}
+			}
 		}
+
+		ray.origin = oldOrigin;
+		ray.dir = oldDir;
 
 		if (anyHit) {
 			shadowRays[rayNum] = ray;

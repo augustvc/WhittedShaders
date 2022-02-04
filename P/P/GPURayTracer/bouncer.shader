@@ -127,10 +127,14 @@ void main() {
 			vec3 triA = vec3(vertexBuffer[triAI * 3], vertexBuffer[triAI * 3 + 1], vertexBuffer[triAI * 3 + 2]);
 			vec3 triB = vec3(vertexBuffer[triBI * 3], vertexBuffer[triBI * 3 + 1], vertexBuffer[triBI * 3 + 2]);
 			vec3 triC = vec3(vertexBuffer[triCI * 3], vertexBuffer[triCI * 3 + 1], vertexBuffer[triCI * 3 + 2]);
-
+			
 			triA = (matrices[rays[rayNum].matrixID] * vec4(triA, 1)).xyz;
 			triB = (matrices[rays[rayNum].matrixID] * vec4(triB, 1)).xyz;
 			triC = (matrices[rays[rayNum].matrixID] * vec4(triC, 1)).xyz;
+
+			//triA = (matrices[0] * vec4(triA, 1)).xyz;
+			//triB = (matrices[0] * vec4(triB, 1)).xyz;
+			//triC = (matrices[0] * vec4(triC, 1)).xyz;
 
 			//triA.y = -triA.y;
 			//triB.y = -triB.y;

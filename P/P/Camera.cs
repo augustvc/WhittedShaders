@@ -94,6 +94,7 @@ public static class Camera
         {
             cameraPosition -= cameraUp * cameraSpeed * (float)e.Time; //Down
         }
+        //Console.WriteLine("Camera position: " + cameraPosition);
         if(input.IsKeyDown(Key.J))
         {
             double dt = e.Time * 2;
