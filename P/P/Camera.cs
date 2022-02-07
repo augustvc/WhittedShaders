@@ -1,4 +1,15 @@
-﻿using System;
+﻿/*
+Copyright 2022 August van Casteren & Shreyes Jishnu Suchindran
+
+You may use this software freely for non-commercial purposes. For any commercial purpose, please contact the authors.
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/
+using System;
 using System.Windows;
 using System.Collections.Generic;
 using System.Linq;
@@ -56,6 +67,38 @@ public static class Camera
 
     }
 
+    static public void SetPosition(Vector3 newPosition, float newPitch, float newYaw)
+    {
+        cameraPosition = newPosition;
+        cameraSpeed = 30.0f;
+        pitch = newPitch;
+        yaw = newYaw;
+
+        if (pitch > 89.0f)
+        {
+            pitch = 89.0f;
+        }
+        else if (pitch < -89.0f)
+        {
+            pitch = -89.0f;
+        }
+
+        cameraFront.X = (float)Math.Cos(MathHelper.DegreesToRadians(pitch)) * (float)Math.Cos(MathHelper.DegreesToRadians(yaw));
+        cameraFront.Y = (float)Math.Sin(MathHelper.DegreesToRadians(pitch));
+        cameraFront.Z = (float)Math.Cos(MathHelper.DegreesToRadians(pitch)) * (float)Math.Sin(MathHelper.DegreesToRadians(yaw));
+        cameraFront = Vector3.Normalize(cameraFront);
+
+        cameraRight.X = (float)Math.Cos(MathHelper.DegreesToRadians(pitch)) * (float)Math.Cos(MathHelper.DegreesToRadians(yaw - 90));
+        cameraRight.Y = 0;
+        cameraRight.Z = (float)Math.Cos(MathHelper.DegreesToRadians(pitch)) * (float)Math.Sin(MathHelper.DegreesToRadians(yaw - 90));
+        cameraRight = Vector3.Normalize(cameraRight);
+
+        cameraUp.X = (float)Math.Cos(MathHelper.DegreesToRadians(pitch + 90)) * (float)Math.Cos(MathHelper.DegreesToRadians(yaw));
+        cameraUp.Y = (float)Math.Sin(MathHelper.DegreesToRadians(pitch + 90));
+        cameraUp.Z = (float)Math.Cos(MathHelper.DegreesToRadians(pitch + 90)) * (float)Math.Sin(MathHelper.DegreesToRadians(yaw));
+        cameraUp = Vector3.Normalize(cameraUp);
+    }
+
     static public void OnUpdateFrame(FrameEventArgs e)
     {
         if (!Focused)
@@ -94,6 +137,7 @@ public static class Camera
         {
             cameraPosition -= cameraUp * cameraSpeed * (float)e.Time; //Down
         }
+
         if(input.IsKeyDown(Key.J))
         {
             double dt = e.Time * 2;

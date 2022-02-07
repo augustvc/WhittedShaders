@@ -1,4 +1,15 @@
-﻿using System;
+﻿/*
+Copyright 2022 August van Casteren & Shreyes Jishnu Suchindran
+
+You may use this software freely for non-commercial purposes. For any commercial purpose, please contact the authors.
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -37,20 +48,15 @@ namespace P
             for (int i = 0; i < model.MeshCount; i++)
             {
                 List<Vector3D> verticesList = model.Meshes[i].Vertices;
-                if(!model.Meshes[i].HasNormals)
-                {
-                    Console.WriteLine("No normals in this mesh");// ... Setting them all to point up??");
-                }
 
                 vertices = new float[model.Meshes[i].Vertices.Count * 6];
                 int j = 0;
                 while (j < verticesList.Count * 3)
                 {
                     Vector3D vertex = model.Meshes[i].Vertices[j / 3];
-                    //Vector3D texCoords = model.Meshes[i].TextureCoordinateChannels[0][j / 8];
                     for (int k = 0; k < 3; k++)
                     {
-                        vertices[j++] = vertex[k];// * 0.1f;
+                        vertices[j++] = vertex[k];
                     }
                 }
                 j = 0;
@@ -62,6 +68,7 @@ namespace P
                 {
                     if (model.Meshes[i].Faces[j].IndexCount == 4)
                     {
+                        //Renderer does not support quads, so we create 2 triangles instead.
                         tris += 2;
                         for(int k = 0; k < 3; k++)
                         {
@@ -155,22 +162,6 @@ namespace P
                         vertices[vertices.Length / 2 + (i * 3) + k] = -indicesTotal[i][k] / indicesOccurence[i];
                     }
                 }
-            }
-            Dictionary<Vector3, int> testDict = new Dictionary<Vector3, int>();
-            for (int i = 0; i < vertices.Length / 2; i+=3)
-            {
-                Vector3 vx = new Vector3(vertices[i], vertices[i + 1], vertices[i + 2]);
-                if (testDict.ContainsKey(vx))
-                {
-                    testDict[vx]++;
-                } else
-                {
-                    testDict[vx] = 1;
-                }
-            }
-            foreach(KeyValuePair<Vector3, int> kv in testDict)
-            {
-                //Console.WriteLine(kv.Value + " of: " + kv.Key);
             }
         }
     }
