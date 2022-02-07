@@ -46,13 +46,15 @@ namespace P
         };
 
         Shader shader;
-        RayTracer rayTracer;
         GPURayTracer gpuRayTracer;
 
         private void MouseUpdate(Object source, ElapsedEventArgs e)
         {
             Camera.OnMouseMove(this);
         }
+
+        Mesh usedMesh;
+        TopLevelBVH topLevelBVH;
 
         protected override void OnLoad(EventArgs e)
         {
@@ -68,10 +70,9 @@ namespace P
 
             Mesh loadedObj = new Mesh(MeshLoader.vertices, MeshLoader.indices);
 
-            Mesh usedMesh = loadedObj;
+            usedMesh = loadedObj;
 
-            TopLevelBVH topLevelBVH = new TopLevelBVH(usedMesh.vertices, usedMesh.indices.ToArray());
-            FourWayBVH topFourWayBVH = new FourWayBVH(topLevelBVH.TopBVH);
+            topLevelBVH = new TopLevelBVH(usedMesh.vertices, usedMesh.indices.ToArray());
 
             GL.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
             VAO = GL.GenVertexArray();
@@ -89,9 +90,8 @@ namespace P
             shader = new Shader("shader.vert", "shader.frag");
             shader.Use();
 
-            rayTracer = new RayTracer(topLevelBVH,topFourWayBVH);
             gpuRayTracer = new GPURayTracer();
-            gpuRayTracer.SetupTriangleBuffers(usedMesh.vertices, usedMesh.indices, topLevelBVH);
+            gpuRayTracer.LoadScene(usedMesh.vertices, usedMesh.indices, topLevelBVH, 3);
 
             base.OnLoad(e);
         }
@@ -107,23 +107,15 @@ namespace P
 
         protected override void OnRenderFrame(FrameEventArgs e)
         {
-            if (!useGPU)
-            {
-                CPUFrame();
-            }
-            else
-            {
-                totalGPUTime += e.Time;
-                GPUFrameCounter++;
-                GPUFrame();
-            }
+            totalGPUTime += e.Time;
+            GPUFrameCounter++;
+            GPUFrame();
+
             renderCheckTime -= e.Time;
             if (renderCheckTime < 0.0)
             {
-                Console.WriteLine("Total primary ray bvh checks: " + RayTracer.totalPrimaryBVHChecks);
-                Console.WriteLine("Avg Render time: " + RayTracer.averageFrameTime);
                 Console.WriteLine("Render fps: " + RenderFrequency);
-                Console.WriteLine("GPU average fps since launch: " + (GPUFrameCounter / totalGPUTime));
+                Console.WriteLine("GPU average fps since scene load: " + (GPUFrameCounter / totalGPUTime));
                 Console.WriteLine("GPU average ray generation execution time (ms): " + GPURayTracer.totalGenRayTime / GPURayTracer.totalFrames);
                 Console.WriteLine("GPU average primary ray firsthit shader execution time (ms): " + GPURayTracer.totalPrimaryRayFirstHitTime / GPURayTracer.totalFrames);
                 Console.WriteLine("GPU average shadow ray shader execution time per frame (ms): " + GPURayTracer.firstShadowRayTime / GPURayTracer.totalFrames);
@@ -146,33 +138,6 @@ namespace P
             Context.SwapBuffers();
         }
 
-        void CPUFrame()
-        {
-            GL.Clear(ClearBufferMask.ColorBufferBit);
-
-            float[] pixels = rayTracer.GenTexture(Width, Height);
-
-            int thandle = GL.GenTexture();
-            shader.Use();
-            GL.ActiveTexture(TextureUnit.Texture0);
-            GL.BindTexture(TextureTarget.Texture2D, thandle);
-
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.Repeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.Repeat);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.LinearMipmapLinear);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-            float[] borderColor = { 1.0f, 1.0f, 0.0f, 1.0f };
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBorderColor, borderColor);
-            GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba, Width, Height, 0, PixelFormat.Rgba, PixelType.Float, pixels);
-            GL.GenerateTextureMipmap(thandle);
-
-            GL.DrawArrays(PrimitiveType.Quads, 0, 4);
-
-            Context.SwapBuffers();
-
-            GL.DeleteTexture(thandle);
-        }
-
         protected override void OnResize(EventArgs e)
         {
             GL.Viewport(0, 0, Width, Height);
@@ -192,25 +157,74 @@ namespace P
                 Exit();
             }
 
-            if (ks.IsKeyDown(Key.Y))
+            if (Focused)
             {
-                if (newYPress)
+                if (ks.IsKeyDown(Key.Y))
                 {
-                    useGPU = !useGPU;
-                    newYPress = false;
-                    if (useGPU)
+                    if (newYPress)
                     {
-                        Title = "GPU Ray Tracer";
-                    }
-                    else
-                    {
-                        Title = "CPU Ray Tracer";
+                        useGPU = !useGPU;
+                        newYPress = false;
+                        if (useGPU)
+                        {
+                            Title = "GPU Ray Tracer";
+                        }
+                        else
+                        {
+                            Title = "CPU Ray Tracer";
+                        }
                     }
                 }
+                else
+                {
+                    newYPress = true;
+                }
             }
-            else
+
+            void resetCounters()
             {
-                newYPress = true;
+                GPUFrameCounter = 0;
+                totalGPUTime = 0.0;
+                GPURayTracer.totalGenRayTime = 0.0;
+                GPURayTracer.totalFrames = 0;
+                GPURayTracer.totalPrimaryRayFirstHitTime = 0.0;
+                GPURayTracer.firstShadowRayTime = 0.0;
+                GPURayTracer.totalRayFirstHitTime = 0.0;
+                GPURayTracer.totalShadowRayTime = 0.0;
+                GPURayTracer.totalBouncerTime = 0.0;
+
+                renderCheckTime = renderCheckInterval;
+            }
+
+            if(ks.IsKeyDown(Key.Number1))
+            {
+                gpuRayTracer.LoadScene(usedMesh.vertices, usedMesh.indices, topLevelBVH, 1);
+                resetCounters();
+            }
+            if (ks.IsKeyDown(Key.Number2))
+            {
+                gpuRayTracer.LoadScene(usedMesh.vertices, usedMesh.indices, topLevelBVH, 2);
+                resetCounters();
+            }
+            if (ks.IsKeyDown(Key.Number3))
+            {
+                gpuRayTracer.LoadScene(usedMesh.vertices, usedMesh.indices, topLevelBVH, 3);
+                resetCounters();
+            }
+            if (ks.IsKeyDown(Key.Number4))
+            {
+                gpuRayTracer.LoadScene(usedMesh.vertices, usedMesh.indices, topLevelBVH, 4);
+                resetCounters();
+            }
+            if (ks.IsKeyDown(Key.Number5))
+            {
+                gpuRayTracer.LoadScene(usedMesh.vertices, usedMesh.indices, topLevelBVH, 5);
+                resetCounters();
+            }
+            if (ks.IsKeyDown(Key.Number6))
+            {
+                gpuRayTracer.LoadScene(usedMesh.vertices, usedMesh.indices, topLevelBVH, 6);
+                resetCounters();
             }
 
             Camera.OnUpdateFrame(e);

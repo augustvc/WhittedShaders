@@ -40,15 +40,15 @@ namespace P
 
             SetupRayBuffers(width, height);
         }
-        
+
         public static void changeSamplesSqrt(int change)
         {
             newSamplesSqrt += change;
-            if(newSamplesSqrt < 1)
+            if (newSamplesSqrt < 1)
             {
                 newSamplesSqrt = 1;
             }
-            if(newSamplesSqrt > 3)
+            if (newSamplesSqrt > 3)
             {
                 newSamplesSqrt = 3;
             }
@@ -98,7 +98,7 @@ namespace P
             SetupAtomics();
         }
 
-        public void SetupTriangleBuffers(float[] vertices, List<uint> indices, TopLevelBVH topLevelBVH)
+        public void LoadScene(float[] vertices, List<uint> indices, TopLevelBVH topLevelBVH, int sceneNumber)
         {
             GL.UseProgram(bvhIntersectionProgram);
             if (vertexBO == -1) vertexBO = GL.GenBuffer();
@@ -135,7 +135,8 @@ namespace P
                     leftOrStart = newIndices.Count;
                     newIndices.AddRange(left.triangleIndices);
                     leftOrEnd = newIndices.Count;
-                } else
+                }
+                else
                 {
                     leftOrStart = leftOrEnd = addBVH(left);
                 }
@@ -144,7 +145,8 @@ namespace P
                     rightOrStart = newIndices.Count;
                     newIndices.AddRange(right.triangleIndices);
                     rightOrEnd = newIndices.Count;
-                } else
+                }
+                else
                 {
                     rightOrStart = rightOrEnd = addBVH(right);
                 }
@@ -178,11 +180,11 @@ namespace P
             List<Vector3> lPoints = new List<Vector3>();
             List<Vector3> rPoints = new List<Vector3>();
 
-            for(int x = 0; x < 2; x++)
+            for (int x = 0; x < 2; x++)
             {
-                for(int y = 0; y < 2; y++)
+                for (int y = 0; y < 2; y++)
                 {
-                    for(int z = 0; z < 2; z++)
+                    for (int z = 0; z < 2; z++)
                     {
                         lPoints.Add(new Vector3(xsL[x], ysL[y], zsL[z]));
                         rPoints.Add(new Vector3(xsR[x], ysR[y], zsR[z]));
@@ -194,14 +196,80 @@ namespace P
             List<Matrix4> finalMatrices = new List<Matrix4>();
             List<GPUMaterial> finalMaterials = new List<GPUMaterial>();
 
-            for (int j = 0; j < 1; j++)
+
+            if (sceneNumber == 1)
             {
-                for (int i = 1; i <= 1; i++)
+                for (int j = 0; j < 1000; j++)
                 {
-                    finalMatrices.Add(Matrix4.CreateRotationY(-0.5f * 3.141592f) * Matrix4.CreateTranslation(i * 100, 0, j * 200) * Matrix4.CreateRotationX(1000 * 0.0001f * i));
-                    //finalMatrices.Add(Matrix4.CreateTranslation(i * 100, 0, j * 200));
-                    finalMaterials.Add(new GPUMaterial(1f - (j / 30f), 1f - (i / 30f), 1, 1f, 0f));
+                    for (int i = 1; i <= 1000; i++)
+                    {
+                        finalMatrices.Add(Matrix4.CreateRotationY(-0.5f * 3.141592f) * Matrix4.CreateTranslation(i * 100, 0, j * 200) * Matrix4.CreateRotationX(1000 * 0.0001f * i));
+                        finalMaterials.Add(new GPUMaterial(1f - (j / 1000f), 1f - (i / 1000f), 1, 1f, 0f));
+                    }
                 }
+                Camera.SetPosition(new Vector3(0f, 0f, 0f), 0f, 0f);
+            }
+            else if (sceneNumber == 2)
+            {
+                for (int j = 0; j < 300; j++)
+                {
+                    for (int i = 1; i <= 300; i++)
+                    {
+                        finalMatrices.Add(Matrix4.CreateTranslation(i * 100, j * 100, j * 30));
+                        finalMaterials.Add(new GPUMaterial(1f - (j / 1000f), 1f - (i / 1000f), 1, 1f, 0f));
+                    }
+                }
+                Camera.SetPosition(new Vector3(-130f, 48f, -18.6f), -2f, 10.1f);
+            }
+            else if (sceneNumber == 3)
+            {
+                //A scene is a combination of matrices and materials.
+                //Every matrix and material you add, is turned into an in-game object with that transformation matrix and material
+                finalMatrices.Add(Matrix4.Identity);
+                finalMaterials.Add(new GPUMaterial(1f, 1f, 1f, 0.2f, 0.8f));
+                finalMatrices.Add(Matrix4.CreateTranslation(0f, 0f, 100f));
+                finalMaterials.Add(new GPUMaterial(1f, 0f, 1f, 0.2f, 0.8f));
+
+                Camera.SetPosition(new Vector3(0f, 30f, -32.9f), -6.3f, 91f);
+            }
+            else if (sceneNumber == 4)
+            {
+                finalMatrices.Add(Matrix4.Identity);
+                finalMaterials.Add(new GPUMaterial(1f, 1f, 1f, 0f, 1f));
+                float red = 1f;
+                float green = 0f;
+                float blue = 0f;
+                for (int i = 0; i < 10; i++)
+                {
+                    finalMatrices.Add(Matrix4.CreateTranslation(-200f, 0f, 0f) * Matrix4.CreateRotationY(-(i * 6.28f) / 10f + 3.14f));
+                    finalMaterials.Add(new GPUMaterial(red, green, blue, 1f, 0f));
+                    float blend = 0.2f;
+                    blue += blend * green;
+                    green -= blend * green;
+                    green += blend * red;
+                    red -= blend * red;
+                    blue -= blend * blue;
+                }
+                Camera.SetPosition(new Vector3(-102.8f, 119.5f, 16.4f), -35.4f, 10f);
+            }
+            else if (sceneNumber == 5)
+            {
+                for (int i = 0; i < indices.Count; i += 3)
+                {
+                    Vector3 position = new Vector3(vertices[indices[i] * 3], vertices[indices[i] * 3 + 1], vertices[indices[i] * 3 + 2]);
+                    position += new Vector3(vertices[indices[i + 1] * 3], vertices[indices[i + 1] * 3 + 1], vertices[indices[i + 1] * 3 + 2]);
+                    position += new Vector3(vertices[indices[i + 2] * 3], vertices[indices[i + 2] * 3 + 1], vertices[indices[i + 2] * 3 + 2]);
+                    position *= 100f;
+                    finalMatrices.Add(Matrix4.CreateTranslation(position));
+                    finalMaterials.Add(new GPUMaterial(0.8f, 0f, 0f, 1f, 0f));
+                }
+                Camera.SetPosition(new Vector3(2000f, 0f, -12000f), 6.6f, 81.2f);
+            }
+            else if (sceneNumber == 6)
+            {
+                finalMatrices.Add(Matrix4.Identity);
+                finalMaterials.Add(new GPUMaterial(0.04f, 0.17f, 0.10f, 1f, 0f));
+                Camera.SetPosition(new Vector3(129f, 48f, -80f), -17.7f, -218f);
             }
 
             List<Vector3> AABBMins = new List<Vector3>();
@@ -243,14 +311,14 @@ namespace P
                 Vector3 aabbmin = new Vector3(float.MaxValue);
                 Vector3 aabbmax = new Vector3(float.MinValue);
 
-                for(int i = 0; i < objectIndices.Count; i++)
+                for (int i = 0; i < objectIndices.Count; i++)
                 {
                     int index = objectIndices[i];
                     aabbmin = Vector3.ComponentMin(aabbmin, AABBMins[index]);
                     aabbmax = Vector3.ComponentMax(aabbmax, AABBMaxes[index]);
                 }
 
-                for(int k = 0; k < 3; k++)
+                for (int k = 0; k < 3; k++)
                 {
                     float range = aabbmax[k] - aabbmin[k];
                     if (range > bestRange)
@@ -271,18 +339,19 @@ namespace P
                     if (AABBMaxes[index][bestAxis] > splitPosition)
                     {
                         rightList.Add(index);
-                    } else
+                    }
+                    else
                     {
                         leftList.Add(index);
                     }
                 }
 
-                if(leftList.Count == 0)
+                if (leftList.Count == 0)
                 {
                     leftList.Add(rightList[rightList.Count - 1]);
                     rightList.RemoveAt(rightList.Count - 1);
                 }
-                if(rightList.Count == 0)
+                if (rightList.Count == 0)
                 {
                     rightList.Add(leftList[leftList.Count - 1]);
                     leftList.RemoveAt(leftList.Count - 1);
@@ -290,13 +359,14 @@ namespace P
 
                 if (objectIndices.Count == 1)
                 {
-                    topNodes.Add(new GPUBVH(topLevelBVH.TopBVH.leftChild.AABBMin, topLevelBVH.TopBVH.leftChild.AABBMax, topLevelBVH.TopBVH.rightChild.AABBMin, topLevelBVH.TopBVH.rightChild.AABBMax, allNodes[0].leftOrStart, -5, allNodes[0].rightOrStart, -5));
+                    //topNodes.Add(new GPUBVH(topLevelBVH.TopBVH.leftChild.AABBMin, topLevelBVH.TopBVH.leftChild.AABBMax, topLevelBVH.TopBVH.rightChild.AABBMin, topLevelBVH.TopBVH.rightChild.AABBMax, allNodes[0].leftOrStart, -1, allNodes[0].rightOrStart, -1));
 
-                    //new GPUBVH(topLevelBVH.TopBVH.leftChild.AABBMin, topLevelBVH.TopBVH.leftChild.AABBMax, topLevelBVH.TopBVH.rightChild.AABBMin, topLevelBVH.TopBVH.rightChild.AABBMax,
-                        //allNodes[0].leftOrStart, objectIndices[0], allNodes[0].rightOrStart, objectIndices[0]));
+                    topNodes.Add(new GPUBVH(topLevelBVH.TopBVH.leftChild.AABBMin, topLevelBVH.TopBVH.leftChild.AABBMax, topLevelBVH.TopBVH.rightChild.AABBMin, topLevelBVH.TopBVH.rightChild.AABBMax,
+                        allNodes[0].leftOrStart, -objectIndices[0] - 1, allNodes[0].rightOrStart, -objectIndices[0] - 1));
 
-                    Console.WriteLine("Leaf NODE, id " + objectIndices[0]);
-                    return topNodes.Count - 1;
+
+                    //Console.WriteLine("Leaf NODE, id " + objectIndices[0]);
+                    return topNodes.Count - 1 + allNodes.Count;
                 }
 
                 int leftChild = Split(leftList);
@@ -319,23 +389,28 @@ namespace P
                     rcmin = Vector3.ComponentMin(rcmin, AABBMins[index]);
                     rcmax = Vector3.ComponentMax(rcmax, AABBMaxes[index]);
                 }
-                
+                //Console.WriteLine("Split, leftlist: " + leftList.Count + ", " + rightList.Count);
+
                 topNodes.Add(new GPUBVH(lcmin, lcmax, rcmin, rcmax, leftChild, leftChild, rightChild, rightChild));
-                Console.WriteLine("AABBMin left: " + lcmin + ", " + lcmax + ", " + rcmin + ", " + rcmax);
-               
-                return topNodes.Count - 1;
+                //topNodes.Add(new GPUBVH(new Vector3(float.MinValue), new Vector3(float.MaxValue), new Vector3(float.MinValue), new Vector3(float.MaxValue), leftChild, leftChild, rightChild, rightChild));
+                //Console.WriteLine("AABBMin left: " + lcmin + ", " + lcmax + ", " + rcmin + ", " + rcmax);
+
+                return topNodes.Count - 1 + allNodes.Count;
             }
 
             int root = Split(objectIds);
-            GL.ProgramUniform1(bvhIntersectionProgram, 3, allNodes.Count);
-            Console.WriteLine("old root: " + allNodes.Count + ", new root adds: " + root);
+            GL.ProgramUniform1(bvhIntersectionProgram, 3, root);
+            Console.WriteLine("old root: " + allNodes.Count + ", new root: " + root);
+
+            Console.WriteLine("Top nodes count: " + topNodes.Count);
 
             for (int i = 0; i < topNodes.Count; i++)
             {
-                //allNodes.Add(topNodes[i]);
+                allNodes.Add(topNodes[i]);
+                //allNodes.Add(new GPUBVH(topLevelBVH.TopBVH.leftChild.AABBMin, topLevelBVH.TopBVH.leftChild.AABBMax, topLevelBVH.TopBVH.rightChild.AABBMin, topLevelBVH.TopBVH.rightChild.AABBMax, allNodes[0].leftOrStart, -5, allNodes[0].rightOrStart, -5));
             }
 
-            GPUBVH topRoot = new GPUBVH(new Vector3(-99999999f), new Vector3(99999999f), new Vector3(-99999999f), new Vector3(99999999f), allNodes.Count + 1, allNodes.Count + 1, allNodes.Count + 2, allNodes.Count + 2);
+            /*GPUBVH topRoot = new GPUBVH(new Vector3(-99999999f), new Vector3(99999999f), new Vector3(-99999999f), new Vector3(99999999f), allNodes.Count + 1, allNodes.Count + 1, allNodes.Count + 2, allNodes.Count + 2);
             GPUBVH mid1 = new GPUBVH(new Vector3(-99999999f), new Vector3(99999999f), new Vector3(-99999999f), new Vector3(99999999f), allNodes.Count + 3, allNodes.Count + 3, allNodes.Count + 4, allNodes.Count + 4);
             GPUBVH mid2 = new GPUBVH(new Vector3(-99999999f), new Vector3(99999999f), AABBMins[4], AABBMaxes[4], allNodes.Count + 5, allNodes.Count + 5, allNodes.Count + 6, allNodes.Count + 6);
             GPUBVH test1 = new GPUBVH(new Vector3(-99999999f), new Vector3(99999999f), new Vector3(-99999999f), new Vector3(99999999f), allNodes[0].leftOrStart, -1, allNodes[0].rightOrStart, -1);
@@ -349,9 +424,8 @@ namespace P
             allNodes.Add(test1);
             allNodes.Add(test2);
             allNodes.Add(test3);
-            allNodes.Add(test4);
-            //GPUBVH test4 = new GPUBVH(topLevelBVH.TopBVH.leftChild.AABBMin, topLevelBVH.TopBVH.leftChild.AABBMax, topLevelBVH.TopBVH.rightChild.AABBMin, topLevelBVH.TopBVH.rightChild.AABBMax, allNodes[0].leftOrStart, -5, allNodes[0].rightOrStart, -5);
-            
+            allNodes.Add(test4);*/
+
             GL.BindBuffer(BufferTarget.ShaderStorageBuffer, BVHBO);
             GL.BufferData(BufferTarget.ShaderStorageBuffer, 16 * 4 * allNodes.Count, allNodes.ToArray(), BufferUsageHint.StaticDraw);
             GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 7, BVHBO);
@@ -394,13 +468,13 @@ namespace P
         static public double totalPrimaryRayFirstHitTime = 0.0;
         static public double totalRayFirstHitTime = 0.0;
         static public double totalShadowRayTime = 0.0;
-        static public double totalGenRayTime= 0.0;
+        static public double totalGenRayTime = 0.0;
         static public double totalBouncerTime = 0.0;
         static public int totalFrames = 0;
 
         public void GenTex(int width, int height)
         {
-            if(samplesSqrt != newSamplesSqrt)
+            if (samplesSqrt != newSamplesSqrt)
             {
                 samplesSqrt = newSamplesSqrt;
                 SetupRayBuffers(width, height);
@@ -442,7 +516,7 @@ namespace P
             totalFrames++;
             //Console.WriteLine("Generating rays took " + genSW.ElapsedMilliseconds + " ms");
 
-            
+
 
             int maximumBounces = 8;
             for (int i = 0; i < maximumBounces; i++)
@@ -557,10 +631,10 @@ namespace P
             GC.SuppressFinalize(this);
         }
 
-        
 
 
-}
+
+    }
 
     struct GPUMaterial
     {
@@ -579,7 +653,6 @@ namespace P
 
     unsafe struct GPUBVH
     {
-        //[MarshalAs(UnmanagedType.ByValArray, SizeConst = 24)]
         public fixed float AABBs[12];
 
         public int leftOrStart;
@@ -638,10 +711,5 @@ namespace P
             rightOrStart = rightOrStartp;
             rightOrEnd = rightOrEndp;
         }
-
-        
-
     }
-
-    
 }

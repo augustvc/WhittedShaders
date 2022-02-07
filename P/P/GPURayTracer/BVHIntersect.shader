@@ -226,6 +226,7 @@ void main()
 			}
 			while (stackCount > 0 && foundTris < 2 && (!allInvocationsARB(foundTris > 0))) {
 				stackCount--;
+				
 				loc = stack[stackOffset + stackCount];
 				if (stackCount == restoreAt) {
 					if (foundTris > 0) {

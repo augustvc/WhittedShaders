@@ -1,4 +1,16 @@
-﻿layout(local_size_x = 64, local_size_y = 1) in;
+﻿/*
+Copyright 2022 August van Casteren & Shreyes Jishnu Suchindran
+
+You may use this software freely for non-commercial purposes
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+*/
+layout(local_size_x = 64, local_size_y = 1) in;
 
 struct Ray
 {
@@ -67,8 +79,8 @@ struct Triangle
 	Material mat;
 };
 
-vec3 lightPosition = vec3(0.0, 1200.0, 0.0);
-vec3 lightValue = vec3(2000000.0, 2000000.0, 2000000.0);
+vec3 lightPosition = vec3(0.0, 1200000.0, 0.0);
+vec3 lightValue = vec3(2000000000000.0, 2000000000000.0, 2000000000000.0);
 
 struct Plane
 {
@@ -179,7 +191,8 @@ void main() {
 			//rays[rayNum].invdir = 1. / rays[rayNum].dir;
 		}
 
-		vec3 newOrigin = rays[rayNum].origin + rays[rayNum].dir * rays[rayNum].t + 0.005 * normal;
+		float epsilon = (length(rays[rayNum].origin) + 1.0) * 0.001;
+		vec3 newOrigin = rays[rayNum].origin + rays[rayNum].dir * rays[rayNum].t + epsilon * normal;
 		
 		if (mat.specular > 0.0) {
 			float ndotr = -dot(normal, rays[rayNum].dir);
