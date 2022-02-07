@@ -1,3 +1,5 @@
+![ray traced image example 1](https://github.com/augustvc/Advanced-Graphics-Practical/blob/main/conference.png?raw=true)
+
 # Advanced-Graphics-Practical
 
 We implemented a Whitted-style ray tracer on the GPU, using glsl compute shaders with OpenTK (a C# library with bindings for OpenGL).
