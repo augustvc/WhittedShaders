@@ -21,7 +21,7 @@ Numbers 1-6 to load a scene. Scene 3 is loaded by default.
 
 # Functionality:
 The program prints some performance information every single frame (measured with the C# Stopwatch class). This is the average of all the frames since starting the program.
-Mesh loading using a library
-Instancing, using the same BVH for multiple instances of the same object, by transforming the ray
-Diffuse and reflective materials
-Normal interpolation for smoother looking surfaces
+Mesh loading using a library.
+Instancing, using the same BVH for multiple instances of the same object, by transforming the ray.
+Diffuse and reflective materials.
+Normal interpolation for smoother looking surfaces.
