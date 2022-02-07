@@ -1,14 +1,13 @@
 ﻿/*
 Copyright 2022 August van Casteren & Shreyes Jishnu Suchindran
 
-You may use this software freely for non-commercial purposes
+You may use this software freely for non-commercial purposes. For any commercial purpose, please contact the authors.
 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
 WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
 */
 layout(local_size_x = 64, local_size_y = 1) in;
 
@@ -128,9 +127,8 @@ void main() {
 
 		vec3 normal = vec3(0.0);
 		Material mat = Material(0.0, 0.0, 0.0, 1.0, 0.0);
-		if (primID >= 30000) {
+		if (primID >= 0) {
 			//Triangle from a mesh
-			primID -= 30000;
 			mat = materials[rays[rayNum].matrixID];
 			uint triAI = indexBuffer[primID++];
 			uint triBI = indexBuffer[primID++];
@@ -143,14 +141,6 @@ void main() {
 			triA = (matrices[rays[rayNum].matrixID] * vec4(triA, 1)).xyz;
 			triB = (matrices[rays[rayNum].matrixID] * vec4(triB, 1)).xyz;
 			triC = (matrices[rays[rayNum].matrixID] * vec4(triC, 1)).xyz;
-
-			//triA = (matrices[0] * vec4(triA, 1)).xyz;
-			//triB = (matrices[0] * vec4(triB, 1)).xyz;
-			//triC = (matrices[0] * vec4(triC, 1)).xyz;
-
-			//triA.y = -triA.y;
-			//triB.y = -triB.y;
-			//triC.y = -triC.y;
 			
 			vec3 ab = triB - triA;
 			vec3 ac = triC - triA;
@@ -173,24 +163,9 @@ void main() {
 
 			mat3 dir_matrix = transpose(inverse(mat3(matrices[rays[rayNum].matrixID])));
 			normal = normalize(dir_matrix * normal);
-
-
-			//normal.y = -normal.y;
-			//normal.y *= 0.5;
-			//normal = normalize(normal);
-			
-			//normal.y = -normal.y;
-			//Real normal in the sense that, this is the one corresponding to the real triangle. The other one is just used for shading.
-			//vec3 realNormal = -normalize(cross(triC - triA, triB - triA));
-			//realNormal.y = -realNormal.y;
-			//if (dot(rays[rayNum].dir, realNormal) > 0)
-				//normal = vec3(0, 0, 0);
-
-			//rays[rayNum].dir.y = -rays[rayNum].dir.y;
-			//rays[rayNum].origin.y = -rays[rayNum].origin.y;
-			//rays[rayNum].invdir = 1. / rays[rayNum].dir;
 		}
 
+		//Avoid shadow acne:
 		float epsilon = (length(rays[rayNum].origin) + 1.0) * 0.001;
 		vec3 newOrigin = rays[rayNum].origin + rays[rayNum].dir * rays[rayNum].t + epsilon * normal;
 		
@@ -202,7 +177,7 @@ void main() {
 					rays[rayNum].dir + ndotr * 2 * normal,
 					1. / (rays[rayNum].dir + ndotr * 2 * normal),
 					rays[rayNum].energy * mat.specular * vec3(mat.r, mat.g, mat.b),
-					100000, rays[rayNum].pixelX, rays[rayNum].pixelY,
+					100000000, rays[rayNum].pixelX, rays[rayNum].pixelY,
 					vec3(0.0),
 					-1,
 					-1);

@@ -1,4 +1,15 @@
-﻿using System;
+﻿/*
+Copyright 2022 August van Casteren & Shreyes Jishnu Suchindran
+
+You may use this software freely for non-commercial purposes. For any commercial purpose, please contact the authors.
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -211,12 +222,12 @@ namespace P
             }
             else if (sceneNumber == 2)
             {
-                for (int j = 0; j < 300; j++)
+                for (int j = 0; j < 2500; j++)
                 {
-                    for (int i = 1; i <= 300; i++)
+                    for (int i = 0; i < 2500; i++)
                     {
-                        finalMatrices.Add(Matrix4.CreateTranslation(i * 100, j * 100, j * 30));
-                        finalMaterials.Add(new GPUMaterial(1f - (j / 1000f), 1f - (i / 1000f), 1, 1f, 0f));
+                        finalMatrices.Add(Matrix4.CreateTranslation(i * 100, 0, j * 100));
+                        finalMaterials.Add(new GPUMaterial(1f, 1f, 1f, 1f, 0f));
                     }
                 }
                 Camera.SetPosition(new Vector3(-130f, 48f, -18.6f), -2f, 10.1f);
@@ -302,7 +313,7 @@ namespace P
             }
 
             List<GPUBVH> topNodes = new List<GPUBVH>();
-            int Split(List<int> objectIndices)
+            int RecursiveSplit(List<int> objectIndices)
             {
                 int bestAxis = 0;
                 float bestRange = 0f;
@@ -369,8 +380,8 @@ namespace P
                     return topNodes.Count - 1 + allNodes.Count;
                 }
 
-                int leftChild = Split(leftList);
-                int rightChild = Split(rightList);
+                int leftChild = RecursiveSplit(leftList);
+                int rightChild = RecursiveSplit(rightList);
 
                 Vector3 lcmin = new Vector3(float.MaxValue);
                 Vector3 lcmax = new Vector3(float.MinValue);
@@ -389,42 +400,29 @@ namespace P
                     rcmin = Vector3.ComponentMin(rcmin, AABBMins[index]);
                     rcmax = Vector3.ComponentMax(rcmax, AABBMaxes[index]);
                 }
-                //Console.WriteLine("Split, leftlist: " + leftList.Count + ", " + rightList.Count);
+
+                if (leftList.Count <= 2 || rightList.Count <= 2)
+                {
+                    if (leftList.Count + rightList.Count > 10)
+                    {
+                        Console.WriteLine("Split, leftlist: " + leftList.Count + ", " + rightList.Count);
+                    }
+                }
 
                 topNodes.Add(new GPUBVH(lcmin, lcmax, rcmin, rcmax, leftChild, leftChild, rightChild, rightChild));
-                //topNodes.Add(new GPUBVH(new Vector3(float.MinValue), new Vector3(float.MaxValue), new Vector3(float.MinValue), new Vector3(float.MaxValue), leftChild, leftChild, rightChild, rightChild));
-                //Console.WriteLine("AABBMin left: " + lcmin + ", " + lcmax + ", " + rcmin + ", " + rcmax);
 
                 return topNodes.Count - 1 + allNodes.Count;
             }
 
-            int root = Split(objectIds);
+            int root = RecursiveSplit(objectIds);
             GL.ProgramUniform1(bvhIntersectionProgram, 3, root);
-            Console.WriteLine("old root: " + allNodes.Count + ", new root: " + root);
 
             Console.WriteLine("Top nodes count: " + topNodes.Count);
 
             for (int i = 0; i < topNodes.Count; i++)
             {
                 allNodes.Add(topNodes[i]);
-                //allNodes.Add(new GPUBVH(topLevelBVH.TopBVH.leftChild.AABBMin, topLevelBVH.TopBVH.leftChild.AABBMax, topLevelBVH.TopBVH.rightChild.AABBMin, topLevelBVH.TopBVH.rightChild.AABBMax, allNodes[0].leftOrStart, -5, allNodes[0].rightOrStart, -5));
             }
-
-            /*GPUBVH topRoot = new GPUBVH(new Vector3(-99999999f), new Vector3(99999999f), new Vector3(-99999999f), new Vector3(99999999f), allNodes.Count + 1, allNodes.Count + 1, allNodes.Count + 2, allNodes.Count + 2);
-            GPUBVH mid1 = new GPUBVH(new Vector3(-99999999f), new Vector3(99999999f), new Vector3(-99999999f), new Vector3(99999999f), allNodes.Count + 3, allNodes.Count + 3, allNodes.Count + 4, allNodes.Count + 4);
-            GPUBVH mid2 = new GPUBVH(new Vector3(-99999999f), new Vector3(99999999f), AABBMins[4], AABBMaxes[4], allNodes.Count + 5, allNodes.Count + 5, allNodes.Count + 6, allNodes.Count + 6);
-            GPUBVH test1 = new GPUBVH(new Vector3(-99999999f), new Vector3(99999999f), new Vector3(-99999999f), new Vector3(99999999f), allNodes[0].leftOrStart, -1, allNodes[0].rightOrStart, -1);
-            GPUBVH test2 = new GPUBVH(new Vector3(-99999999f), new Vector3(99999999f), new Vector3(-99999999f), new Vector3(99999999f), allNodes[0].leftOrStart, -2, allNodes[0].rightOrStart, -2);
-            GPUBVH test3 = new GPUBVH(new Vector3(-99999999f), new Vector3(99999999f), new Vector3(-99999999f), new Vector3(99999999f), allNodes[0].leftOrStart, -3, allNodes[0].rightOrStart, -3);
-            GPUBVH test4 = new GPUBVH(topLevelBVH.TopBVH.leftChild.AABBMin, topLevelBVH.TopBVH.leftChild.AABBMax, topLevelBVH.TopBVH.rightChild.AABBMin, topLevelBVH.TopBVH.rightChild.AABBMax, allNodes[0].leftOrStart, -5, allNodes[0].rightOrStart, -5);
-
-            allNodes.Add(topRoot);
-            allNodes.Add(mid1);
-            allNodes.Add(mid2);
-            allNodes.Add(test1);
-            allNodes.Add(test2);
-            allNodes.Add(test3);
-            allNodes.Add(test4);*/
 
             GL.BindBuffer(BufferTarget.ShaderStorageBuffer, BVHBO);
             GL.BufferData(BufferTarget.ShaderStorageBuffer, 16 * 4 * allNodes.Count, allNodes.ToArray(), BufferUsageHint.StaticDraw);
@@ -474,13 +472,18 @@ namespace P
 
         public void GenTex(int width, int height)
         {
+            //Generate a texture with a width and height matching the screen's width and height. This texture is used to display our ray-traced pixels.
+
+            
             if (samplesSqrt != newSamplesSqrt)
             {
+                //Multi sample anti-aliasing parameters changed
                 samplesSqrt = newSamplesSqrt;
                 SetupRayBuffers(width, height);
             }
             if (width != this.width || height != this.height)
             {
+                //Screen was resized
                 SetupRayBuffers(width, height);
                 this.width = width;
                 this.height = height;
@@ -490,6 +493,7 @@ namespace P
             GL.ClearTexImage(textureHandle, 0, PixelFormat.Rgba, PixelType.Float, IntPtr.Zero);
             GL.UseProgram(generateProgram);
 
+            //Update camera position and screen plane
             GL.Uniform3(GL.GetUniformLocation(generateProgram, "cameraOrigin"), Camera.getCameraPosition());
             Vector3 yRange = Camera.getCameraUp() * 2 * ((float)height / (float)width);
             GL.Uniform3(GL.GetUniformLocation(generateProgram, "p1"), Camera.getCameraFront() - Camera.getCameraRight() - yRange / 2.0f);
@@ -508,14 +512,11 @@ namespace P
             Stopwatch genSW = new Stopwatch();
             genSW.Start();
             GL.DispatchCompute((width * samplesSqrt) / 32, (height * samplesSqrt), 1);
-            //GL.MemoryBarrier(MemoryBarrierFlags.ShaderStorageBarrierBit);
-            //GL.MemoryBarrier(MemoryBarrierFlags.AllBarrierBits);
+
             GL.Finish();
             genSW.Stop();
             totalGenRayTime += genSW.Elapsed.TotalMilliseconds;
             totalFrames++;
-            //Console.WriteLine("Generating rays took " + genSW.ElapsedMilliseconds + " ms");
-
 
 
             int maximumBounces = 8;
@@ -541,6 +542,7 @@ namespace P
 
                 Stopwatch sw = new Stopwatch();
                 sw.Start();
+
                 //Run the programs
                 GL.Uniform1(1, 0);
                 GL.DispatchCompute(8704 * 4 / 64, 1, 1);
@@ -586,7 +588,6 @@ namespace P
                     new IntPtr(sizeof(uint) * 3), new IntPtr(sizeof(uint)), sizeof(uint));
 
                 currentInBuffer = 1 - currentInBuffer;
-                //Console.WriteLine("Finishing up time: " + sw.Elapsed);
             }
         }
 

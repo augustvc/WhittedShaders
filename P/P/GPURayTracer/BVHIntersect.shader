@@ -1,4 +1,15 @@
-﻿layout(local_size_x = 64, local_size_y = 1) in;
+﻿/*
+Copyright 2022 August van Casteren & Shreyes Jishnu Suchindran
+
+You may use this software freely for non-commercial purposes. For any commercial purpose, please contact the authors.
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/
+layout(local_size_x = 64, local_size_y = 1) in;
 
 struct Ray
 {
@@ -56,11 +67,12 @@ struct BVH
 	float AABBs[12];
 
 	int leftOrStart;
-	int leftOrEnd; //-8 -> matrices[7], -1 -> matrices[0]
+	int leftOrEnd;
 
 	int rightOrStart;
 	int rightOrEnd;
-}; //If leftOrEnd is negative, it points to a matrix, and leftOrStart points to a bvh. Same logic with the right side.
+};
+//If leftOrEnd is negative, it points to a matrix, and leftOrStart points to a bvh. Same logic with the right side.  leftOrStart = -8 -> use matrices[7], -1 -> matrices[0]
 //If leftOrStart is equal to leftOrEnd, they both point to a bvh as well.
 //In the other cases, leftOrEnd is positive and so is leftOrStart. And from start to end is the range of triangles they point to, it is a leaf node.
 
@@ -80,11 +92,6 @@ uint matrixNum = 0;
 
 float rayAABB(float maxX, float maxY, float maxZ, float minX, float minY, float minZ) {
 	// Ray-AABB intersection code inspired by https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-box-intersection
-	//float tmin = (bounds[signX].x - ray.origin.x) * ray.invdir.x;
-	//float tmax = (bounds[1 - signX].x - ray.origin.x) * ray.invdir.x;
-	//float tymin = (bounds[signY].y - ray.origin.y) * ray.invdir.y;
-	//float tymax = (bounds[1 - signY].y - ray.origin.y) * ray.invdir.y;
-
 	float tmin = (minX - ray.origin.x) * ray.invdir.x;
 	float tmax = (maxX - ray.origin.x) * ray.invdir.x;
 	float tymin = (minY - ray.origin.y) * ray.invdir.y;
@@ -148,7 +155,7 @@ void doTris(int start, int end) {
 
 		if (t < ray.t) {
 			ray.t = t;
-			ray.primID = 30000 + i - 3;
+			ray.primID = i - 3;
 			ray.matrixID = matrixNum;
 		}
 	}
@@ -162,8 +169,6 @@ int stackCount;
 shared int stack[32 * 64];
 int restoreAt;
 
-//Stack stack;
-//#define GL_ARB_shader_group_vote          1
 #extension GL_ARB_shader_group_vote : enable
 
 void main() 
@@ -187,14 +192,8 @@ void main()
 
 		matrixNum = 0;
 
-		vec3 oldOrigin = ray.origin;
-		vec3 oldDir = ray.dir;
-		//transformation
-		//mat3 dir_matrix = inverse(mat3(matrices[matrixNum]));
-		//ray.origin = (inverse(matrices[matrixNum]) * vec4(ray.origin, 1)).xyz;
-		//ray.dir = (dir_matrix * ray.dir);
-
-		//ray.invdir = 1. / ray.dir;
+		vec3 untransformedOrigin = ray.origin;
+		vec3 untransformedDir = ray.dir;
 
 		stack[stackOffset] = treeRoot;
 		stackCount = 1;
@@ -208,7 +207,8 @@ void main()
 
 		int loc = treeRoot;
 		BVH bvh = bvhs[loc];
-		//Triangle ranges that have to be done (tiny stack)
+
+		//Triangle ranges that have to be done (tiny stack). This is used to do speculative traversal
 		int foundTris = 0;
 		int start1 = 0;
 		int start2 = 0;
@@ -229,14 +229,17 @@ void main()
 				
 				loc = stack[stackOffset + stackCount];
 				if (stackCount == restoreAt) {
+					//We've exited our object. Restore the untransformed ray.
+
 					if (foundTris > 0) {
+						//We still have triangles left to do in our transformed state before we can untransform the ray.
+						//Exit the traversal loop and test triangles first.
 						stackCount++;
 						break;
 					}
 
-					ray.origin = oldOrigin;
-					ray.dir = oldDir;
-
+					ray.origin = untransformedOrigin;
+					ray.dir = untransformedDir;
 					ray.invdir = 1. / ray.dir;
 
 					lowX = ray.dir.x > 0f ? 3 : 0;
@@ -253,13 +256,9 @@ void main()
 
 					matrixNum = -(bvhs[loc].leftOrEnd + 1);
 
-					oldOrigin = ray.origin;
-					oldDir = ray.dir;
-
 					mat3 dir_matrix = inverse(mat3(matrices[matrixNum]));
 					ray.origin = (inverse(matrices[matrixNum]) * vec4(ray.origin, 1)).xyz;
 					ray.dir = dir_matrix * ray.dir;
-
 					ray.invdir = 1. / ray.dir;
 
 					lowX = ray.dir.x > 0f ? 3 : 0;
@@ -353,8 +352,8 @@ void main()
 			}
 		}
 
-		ray.origin = oldOrigin;
-		ray.dir = oldDir;
+		ray.origin = untransformedOrigin;
+		ray.dir = untransformedDir;
 
 		if (anyHit) {
 			shadowRays[rayNum] = ray;
