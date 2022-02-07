@@ -1,4 +1,5 @@
 ![ray traced image example 1](https://github.com/augustvc/Advanced-Graphics-Practical/blob/main/Conference.png?raw=true)
+![ray traced image example 2](https://github.com/augustvc/Advanced-Graphics-Practical/blob/main/Dragondragon.png?raw=true)
 
 # Advanced-Graphics-Practical
 
