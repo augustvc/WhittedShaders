@@ -28,3 +28,4 @@ Mesh loading using a library.
 Instancing, using the same BVH for multiple instances of the same object, by transforming the ray.  
 Diffuse and reflective materials.  
 Normal interpolation for smoother looking surfaces.  
+Note: if your GPU memory is on the lower end, you may need to resize the window to be smaller for the program to work.
