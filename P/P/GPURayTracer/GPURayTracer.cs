@@ -207,7 +207,8 @@ namespace P
             List<Matrix4> finalMatrices = new List<Matrix4>();
             List<GPUMaterial> finalMaterials = new List<GPUMaterial>();
 
-
+            //A scene is a combination of matrices and materials.
+            //Every matrix and material you add, is turned into an in-game object with that transformation matrix and material
             if (sceneNumber == 1)
             {
                 for (int j = 0; j < 1000; j++)
@@ -234,8 +235,6 @@ namespace P
             }
             else if (sceneNumber == 3)
             {
-                //A scene is a combination of matrices and materials.
-                //Every matrix and material you add, is turned into an in-game object with that transformation matrix and material
                 finalMatrices.Add(Matrix4.Identity);
                 finalMaterials.Add(new GPUMaterial(1f, 1f, 1f, 0.2f, 0.8f));
                 finalMatrices.Add(Matrix4.CreateTranslation(0f, 0f, 100f));
@@ -399,14 +398,6 @@ namespace P
                     int index = rightList[i];
                     rcmin = Vector3.ComponentMin(rcmin, AABBMins[index]);
                     rcmax = Vector3.ComponentMax(rcmax, AABBMaxes[index]);
-                }
-
-                if (leftList.Count <= 2 || rightList.Count <= 2)
-                {
-                    if (leftList.Count + rightList.Count > 10)
-                    {
-                        Console.WriteLine("Split, leftlist: " + leftList.Count + ", " + rightList.Count);
-                    }
                 }
 
                 topNodes.Add(new GPUBVH(lcmin, lcmax, rcmin, rcmax, leftChild, leftChild, rightChild, rightChild));

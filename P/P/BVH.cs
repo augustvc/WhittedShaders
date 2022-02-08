@@ -42,18 +42,9 @@ namespace P
             this.vertices = vertices;
             TopBVH = new BVH(vertices, indices);
 
-            //SlowSplit(TopBVH);
-            RecursiveSplit(TopBVH, 8);
-            Console.WriteLine("leftchild of root: " + TopBVH.leftChild.SAH);
-            Console.WriteLine("rightchild of root: " + TopBVH.rightChild.SAH);
-
-
-            //BVH TopBVH2 = new BVH(vertices, indices);
-            //RecursiveSplit(TopBVH2, 31);
-
-            //Console.WriteLine("Top SAH  : " + TopBVH.SAH);
-            //Console.WriteLine("Top SAH 2: " + TopBVH2.SAH);
-
+            SlowSplit(TopBVH);
+            //RecursiveSplit(TopBVH, 8);
+            
             threads = new Thread[desiredThreads];
 
             for (int i = 0; i < desiredThreads; i++)
