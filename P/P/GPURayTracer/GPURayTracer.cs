@@ -557,7 +557,7 @@ namespace P
                 //Reset the intersection job counter
                 GL.BufferSubData(BufferTarget.AtomicCounterBuffer, new IntPtr(sizeof(uint) * 3), sizeof(uint), new uint[] { 0 });
                 GL.Uniform1(1, 1);
-                GL.DispatchCompute(8704 * 4 / 64, 1, 1);
+                GL.DispatchCompute(8704 * 4 / 96, 1, 1);
                 GL.Finish();
                 sw.Stop();
                 if (i == 0)
