@@ -9,7 +9,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
 WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
-layout(local_size_x = 64, local_size_y = 1) in;
+layout(local_size_x = 96, local_size_y = 1) in;
 
 struct Ray
 {
@@ -96,23 +96,20 @@ float rayAABB(float maxX, float maxY, float maxZ, float minX, float minY, float 
 	float tmax = (maxX - ray.origin.x) * ray.invdir.x;
 	float tymin = (minY - ray.origin.y) * ray.invdir.y;
 	float tymax = (maxY - ray.origin.y) * ray.invdir.y;
-
-	if ((tmin > tymax) || (tymin > tmax))
-		tmin = 1. / 0.;
-	tmin = max(tymin, tmin);
-	tmax = min(tmax, tymax);
-
 	float tzmin = (minZ - ray.origin.z) * ray.invdir.z;
 	float tzmax = (maxZ - ray.origin.z) * ray.invdir.z;
 
-	if ((tmin > tzmax) || (tzmin > tmax))
-		tmin = 1. / 0.;
+	tmin = max(tymin, tmin);
+	tmax = min(tmax, tymax);
 	tmin = max(tzmin, tmin);
 	tmax = min(tzmax, tmax);
 
 	if (tmin < 0f && tmax >= 0f)
 	{
 		tmin = 0f;
+	}
+	if (tmin > tmax) {
+		tmin = 1. / 0.;
 	}
 	return tmin;
 }
@@ -166,7 +163,7 @@ layout(location = 1) uniform bool anyHit;
 layout(location = 3) uniform int treeRoot;
 
 int stackCount;
-shared int stack[32 * 64];
+int stack[32];
 int restoreAt;
 
 #extension GL_ARB_shader_group_vote : enable
@@ -174,7 +171,7 @@ int restoreAt;
 void main() 
 {
 	rayNum = atomicCounterIncrement(intersectionJob);
-	uint stackOffset = gl_LocalInvocationIndex * 32;
+	//uint stackOffset = 0;// gl_LocalInvocationIndex * 32;
 
 	uint maxRays = 0;
 	if (anyHit) {
@@ -195,7 +192,7 @@ void main()
 		vec3 untransformedOrigin = ray.origin;
 		vec3 untransformedDir = ray.dir;
 
-		stack[stackOffset] = treeRoot;
+		stack[0] = treeRoot;
 		stackCount = 1;
 
 		int lowX = ray.dir.x > 0f ? 3 : 0;
@@ -227,7 +224,7 @@ void main()
 			while (stackCount > 0 && foundTris < 2 && (!allInvocationsARB(foundTris > 0))) {
 				stackCount--;
 				
-				loc = stack[stackOffset + stackCount];
+				loc = stack[stackCount];
 				if (stackCount == restoreAt) {
 					//We've exited our object. Restore the untransformed ray.
 
@@ -301,7 +298,7 @@ void main()
 						foundTris++;
 					}
 					else {
-						stack[stackOffset + stackCount] = bvh.rightOrStart;
+						stack[stackCount] = bvh.rightOrStart;
 						stackCount++;
 					}
 				}
@@ -322,7 +319,7 @@ void main()
 						foundTris++;
 					}
 					else {
-						stack[stackOffset + stackCount] = bvh.leftOrStart;
+						stack[stackCount] = bvh.leftOrStart;
 						stackCount++;
 					}
 				}
