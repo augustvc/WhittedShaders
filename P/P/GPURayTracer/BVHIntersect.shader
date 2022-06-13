@@ -90,28 +90,24 @@ Ray ray;
 uint rayNum = 4000000000;
 uint matrixNum = 0;
 
-float rayAABB(float maxX, float maxY, float maxZ, float minX, float minY, float minZ) {
+float rayAABB(vec3 tmaxs, vec3 tmins) {
 	// Ray-AABB intersection code inspired by https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-box-intersection
-	float tmin = (minX - ray.origin.x) * ray.invdir.x;
-	float tmax = (maxX - ray.origin.x) * ray.invdir.x;
-	float tymin = (minY - ray.origin.y) * ray.invdir.y;
-	float tymax = (maxY - ray.origin.y) * ray.invdir.y;
-	float tzmin = (minZ - ray.origin.z) * ray.invdir.z;
-	float tzmax = (maxZ - ray.origin.z) * ray.invdir.z;
+	tmins = (tmins - ray.origin) * ray.invdir;
+	tmaxs = (tmaxs - ray.origin) * ray.invdir;
 
-	tmin = max(tymin, tmin);
-	tmax = min(tmax, tymax);
-	tmin = max(tzmin, tmin);
-	tmax = min(tzmax, tmax);
+	tmins.x = max(tmins.x, tmins.y);
+	tmins.x = max(tmins.x, tmins.z);
+	tmaxs.x = min(tmaxs.x, tmaxs.y);
+	tmaxs.x = min(tmaxs.x, tmaxs.z);
 
-	if (tmin < 0f && tmax >= 0f)
+	if (tmins.x < 0f && tmaxs.x >= 0f)
 	{
-		tmin = 0f;
+		tmins.x = 0f;
 	}
-	if (tmin > tmax) {
-		tmin = 1. / 0.;
+	if (tmins.x > tmaxs.x) {
+		tmins.x = 1. / 0.;
 	}
-	return tmin;
+	return tmins.x;
 }
 
 void doTris(int start, int end) {
@@ -266,8 +262,13 @@ void main()
 					highZ = ray.dir.z > 0f ? 2 : 5;
 				}
 
-				float leftDist = rayAABB(bvhs[loc].AABBs[lowX], bvhs[loc].AABBs[lowY], bvhs[loc].AABBs[lowZ], bvhs[loc].AABBs[highX], bvhs[loc].AABBs[highY], bvhs[loc].AABBs[highZ]);
-				float rightDist = rayAABB(bvhs[loc].AABBs[lowX + 6], bvhs[loc].AABBs[lowY + 6], bvhs[loc].AABBs[lowZ + 6], bvhs[loc].AABBs[highX + 6], bvhs[loc].AABBs[highY + 6], bvhs[loc].AABBs[highZ + 6]);
+				float leftDist = rayAABB(
+					vec3(bvhs[loc].AABBs[lowX], bvhs[loc].AABBs[lowY], bvhs[loc].AABBs[lowZ]),
+					vec3(bvhs[loc].AABBs[highX], bvhs[loc].AABBs[highY], bvhs[loc].AABBs[highZ]));
+				
+				float rightDist = rayAABB(
+					vec3(bvhs[loc].AABBs[lowX + 6], bvhs[loc].AABBs[lowY + 6], bvhs[loc].AABBs[lowZ + 6]),
+					vec3(bvhs[loc].AABBs[highX + 6], bvhs[loc].AABBs[highY + 6], bvhs[loc].AABBs[highZ + 6]));
 
 				bvh = bvhs[loc];
 				if (leftDist > rightDist) {
