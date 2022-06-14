@@ -15,7 +15,6 @@ struct Ray
 {
 	vec3 origin;
 	vec3 dir;
-	vec3 invdir;
 	vec3 energy;
 	float t;
 	uint pixelX;
@@ -47,7 +46,6 @@ void main() {
 	rays[atomicCounterIncrement(rayCountIn)] = Ray(
 		cameraOrigin,
 		dir,
-		1. / dir,
 		vec3(1.0),
 		(1. / 0.),
 		gl_GlobalInvocationID.x,

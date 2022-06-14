@@ -15,7 +15,6 @@ struct Ray
 {
 	vec3 origin;
 	vec3 dir;
-	vec3 invdir;
 	vec3 energy;
 	float t;
 	uint pixelX;
@@ -92,8 +91,8 @@ uint matrixNum = 0;
 
 float rayAABB(vec3 tmaxs, vec3 tmins) {
 	// Ray-AABB intersection code inspired by https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-box-intersection
-	tmins = (tmins - ray.origin) * ray.invdir;
-	tmaxs = (tmaxs - ray.origin) * ray.invdir;
+	tmins = (tmins - ray.origin) / ray.dir;
+	tmaxs = (tmaxs - ray.origin) / ray.dir;
 
 	tmins.x = max(tmins.x, tmins.y);
 	tmins.x = max(tmins.x, tmins.z);
@@ -233,7 +232,6 @@ void main()
 
 					ray.origin = untransformedOrigin;
 					ray.dir = untransformedDir;
-					ray.invdir = 1. / ray.dir;
 
 					lowX = ray.dir.x > 0f ? 3 : 0;
 					lowY = ray.dir.y > 0f ? 4 : 1;
@@ -252,7 +250,6 @@ void main()
 					mat3 dir_matrix = inverse(mat3(matrices[matrixNum]));
 					ray.origin = (inverse(matrices[matrixNum]) * vec4(ray.origin, 1)).xyz;
 					ray.dir = dir_matrix * ray.dir;
-					ray.invdir = 1. / ray.dir;
 
 					lowX = ray.dir.x > 0f ? 3 : 0;
 					lowY = ray.dir.y > 0f ? 4 : 1;
