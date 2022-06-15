@@ -21,7 +21,7 @@ using P;
 
 namespace P
 {
-    class TopLevelBVH
+    class ObjectBVH
     {
         public float[] vertices;
         public BVH TopBVH;
@@ -34,7 +34,7 @@ namespace P
 
         const float constantCost = 5f;
 
-        public TopLevelBVH(float[] vertices, uint[] indices)
+        public ObjectBVH(float[] vertices, uint[] indices)
         {
             Stopwatch sw = new Stopwatch();
             sw.Start();

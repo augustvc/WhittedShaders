@@ -164,6 +164,7 @@ void main() {
 				v * vec3(vertexBuffer[normalsOffset + triCI * 3], vertexBuffer[normalsOffset + triCI * 3 + 1], vertexBuffer[normalsOffset + triCI * 3 + 2])
 			);
 
+			// Triangles and normals are stored in object-space. Use the object's matrix to transform the normal to world space.
 			mat3 dir_matrix = transpose(inverse(mat3(matrices[rays[rayNum].matrixID])));
 			normal = normalize(dir_matrix * normal);
 		}

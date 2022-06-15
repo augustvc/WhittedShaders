@@ -65,7 +65,7 @@ namespace P
         }
 
         Mesh usedMesh;
-        TopLevelBVH topLevelBVH;
+        ObjectBVH topLevelBVH;
 
         protected override void OnLoad(EventArgs e)
         {
@@ -83,7 +83,7 @@ namespace P
 
             usedMesh = loadedObj;
 
-            topLevelBVH = new TopLevelBVH(usedMesh.vertices, usedMesh.indices.ToArray());
+            topLevelBVH = new ObjectBVH(usedMesh.vertices, usedMesh.indices.ToArray());
 
             GL.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
             VAO = GL.GenVertexArray();
@@ -102,7 +102,8 @@ namespace P
             shader.Use();
 
             gpuRayTracer = new GPURayTracer();
-            gpuRayTracer.LoadScene(usedMesh.vertices, usedMesh.indices, topLevelBVH, 3);
+            GameScene.LoadDefaultScene(3);
+            gpuRayTracer.LoadScene(usedMesh.vertices, usedMesh.indices, topLevelBVH);
 
             base.OnLoad(e);
         }
@@ -155,7 +156,6 @@ namespace P
             base.OnResize(e);
         }
 
-        bool newYPress = true;
         protected override void OnUpdateFrame(FrameEventArgs e)
         {
             Camera.OnMouseMove(this);
@@ -166,30 +166,6 @@ namespace P
             if (ks.IsKeyDown(Key.Escape))
             {
                 Exit();
-            }
-
-            if (Focused)
-            {
-                if (ks.IsKeyDown(Key.Y))
-                {
-                    if (newYPress)
-                    {
-                        useGPU = !useGPU;
-                        newYPress = false;
-                        if (useGPU)
-                        {
-                            Title = "GPU Ray Tracer";
-                        }
-                        else
-                        {
-                            Title = "CPU Ray Tracer";
-                        }
-                    }
-                }
-                else
-                {
-                    newYPress = true;
-                }
             }
 
             void resetCounters()
@@ -207,35 +183,46 @@ namespace P
                 renderCheckTime = renderCheckInterval;
             }
 
-            if(ks.IsKeyDown(Key.Number1))
+            if (Focused)
             {
-                gpuRayTracer.LoadScene(usedMesh.vertices, usedMesh.indices, topLevelBVH, 1);
-                resetCounters();
-            }
-            if (ks.IsKeyDown(Key.Number2))
-            {
-                gpuRayTracer.LoadScene(usedMesh.vertices, usedMesh.indices, topLevelBVH, 2);
-                resetCounters();
-            }
-            if (ks.IsKeyDown(Key.Number3))
-            {
-                gpuRayTracer.LoadScene(usedMesh.vertices, usedMesh.indices, topLevelBVH, 3);
-                resetCounters();
-            }
-            if (ks.IsKeyDown(Key.Number4))
-            {
-                gpuRayTracer.LoadScene(usedMesh.vertices, usedMesh.indices, topLevelBVH, 4);
-                resetCounters();
-            }
-            if (ks.IsKeyDown(Key.Number5))
-            {
-                gpuRayTracer.LoadScene(usedMesh.vertices, usedMesh.indices, topLevelBVH, 5);
-                resetCounters();
-            }
-            if (ks.IsKeyDown(Key.Number6))
-            {
-                gpuRayTracer.LoadScene(usedMesh.vertices, usedMesh.indices, topLevelBVH, 6);
-                resetCounters();
+                if (ks.IsKeyDown(Key.Number1))
+                {
+                    GameScene.LoadDefaultScene(1);
+                    gpuRayTracer.LoadScene(usedMesh.vertices, usedMesh.indices, topLevelBVH);
+                    resetCounters();
+                }
+                if (ks.IsKeyDown(Key.Number2))
+                {
+                    GameScene.LoadDefaultScene(2);
+                    gpuRayTracer.LoadScene(usedMesh.vertices, usedMesh.indices, topLevelBVH);
+                    resetCounters();
+                }
+                if (ks.IsKeyDown(Key.Number3))
+                {
+                    GameScene.LoadDefaultScene(3);
+                    gpuRayTracer.LoadScene(usedMesh.vertices, usedMesh.indices, topLevelBVH);
+                    resetCounters();
+                }
+                if (ks.IsKeyDown(Key.Number4))
+                {
+                    GameScene.LoadDefaultScene(4);
+                    gpuRayTracer.LoadScene(usedMesh.vertices, usedMesh.indices, topLevelBVH);
+                    resetCounters();
+                }
+                if (ks.IsKeyDown(Key.Number5))
+                {
+                    GameScene.scene5Indices = usedMesh.indices;
+                    GameScene.scene5Vertices = usedMesh.vertices;
+                    GameScene.LoadDefaultScene(5);
+                    gpuRayTracer.LoadScene(usedMesh.vertices, usedMesh.indices, topLevelBVH);
+                    resetCounters();
+                }
+                if (ks.IsKeyDown(Key.Number6))
+                {
+                    GameScene.LoadDefaultScene(6);
+                    gpuRayTracer.LoadScene(usedMesh.vertices, usedMesh.indices, topLevelBVH);
+                    resetCounters();
+                }
             }
 
             Camera.OnUpdateFrame(e);
