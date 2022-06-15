@@ -1,7 +1,7 @@
 ![ray traced image example 1](https://github.com/augustvc/Advanced-Graphics-Practical/blob/main/Conference.png?raw=true)  
 ![ray traced image example 2](https://github.com/augustvc/Advanced-Graphics-Practical/blob/main/Dragondragon.png?raw=true)  
 
-Realtime demo: https://www.youtube.com/watch?v=J513nnZyh5o
+Realtime demo with some different details in the video description: https://www.youtube.com/watch?v=J513nnZyh5o
 
 # The project
 
