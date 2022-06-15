@@ -109,7 +109,7 @@ namespace P
             SetupAtomics();
         }
 
-        public void LoadScene(float[] vertices, List<uint> indices, ObjectBVH topLevelBVH)
+        public void LoadScene(float[] vertices, uint[] indices, ObjectBVH topLevelBVH)
         {
             GL.UseProgram(bvhIntersectionProgram);
             if (vertexBO == -1) vertexBO = GL.GenBuffer();
@@ -117,7 +117,7 @@ namespace P
 
             Console.WriteLine("Buffer data: " + vertices.Length);
             Console.WriteLine("First: " + vertices[0]);
-            Console.WriteLine("Indices data: " + indices.Count);
+            Console.WriteLine("Indices data: " + indices.Length);
             GL.BindBuffer(BufferTarget.ShaderStorageBuffer, vertexBO);
             GL.BufferData(BufferTarget.ShaderStorageBuffer, vertices.Length * sizeof(float), vertices, BufferUsageHint.StaticDraw);
             GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 5, vertexBO);
@@ -166,7 +166,7 @@ namespace P
                 return nodeIdx;
             }
 
-            addBVH(topLevelBVH.TopBVH);
+            addBVH(topLevelBVH.BVHRoot);
 
             GL.BindBuffer(BufferTarget.ShaderStorageBuffer, faceBO);
             GL.BufferData(BufferTarget.ShaderStorageBuffer, newIndices.Count * sizeof(uint), newIndices.ToArray(), BufferUsageHint.StaticDraw);
@@ -175,10 +175,10 @@ namespace P
             Console.WriteLine("All nodes: " + allNodes.Count);
             Console.WriteLine("All indices: " + newIndices.Count);
 
-            Vector3 lMin = topLevelBVH.TopBVH.leftChild.AABBMin;
-            Vector3 lMax = topLevelBVH.TopBVH.leftChild.AABBMax;
-            Vector3 rMin = topLevelBVH.TopBVH.rightChild.AABBMin;
-            Vector3 rMax = topLevelBVH.TopBVH.rightChild.AABBMax;
+            Vector3 lMin = topLevelBVH.BVHRoot.leftChild.AABBMin;
+            Vector3 lMax = topLevelBVH.BVHRoot.leftChild.AABBMax;
+            Vector3 rMin = topLevelBVH.BVHRoot.rightChild.AABBMin;
+            Vector3 rMax = topLevelBVH.BVHRoot.rightChild.AABBMax;
 
             float[] xsL = new float[] { lMin.X, lMax.X };
             float[] ysL = new float[] { lMin.Y, lMax.Y };
@@ -290,13 +290,9 @@ namespace P
 
                 if (objectIndices.Count == 1)
                 {
-                    //topNodes.Add(new GPUBVH(topLevelBVH.TopBVH.leftChild.AABBMin, topLevelBVH.TopBVH.leftChild.AABBMax, topLevelBVH.TopBVH.rightChild.AABBMin, topLevelBVH.TopBVH.rightChild.AABBMax, allNodes[0].leftOrStart, -1, allNodes[0].rightOrStart, -1));
-
-                    topNodes.Add(new GPUBVH(topLevelBVH.TopBVH.leftChild.AABBMin, topLevelBVH.TopBVH.leftChild.AABBMax, topLevelBVH.TopBVH.rightChild.AABBMin, topLevelBVH.TopBVH.rightChild.AABBMax,
+                    topNodes.Add(new GPUBVH(topLevelBVH.BVHRoot.leftChild.AABBMin, topLevelBVH.BVHRoot.leftChild.AABBMax, topLevelBVH.BVHRoot.rightChild.AABBMin, topLevelBVH.BVHRoot.rightChild.AABBMax,
                         allNodes[0].leftOrStart, -objectIndices[0] - 1, allNodes[0].rightOrStart, -objectIndices[0] - 1));
 
-
-                    //Console.WriteLine("Leaf NODE, id " + objectIndices[0]);
                     return topNodes.Count - 1 + allNodes.Count;
                 }
 

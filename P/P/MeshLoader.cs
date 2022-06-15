@@ -21,11 +21,12 @@ namespace P
 {
     static class MeshLoader
     {
-        public static float[] vertices = new float[0];
-        public static List<uint> indices = new List<uint>();
 
-        public static void Init()
+        public static Mesh LoadMesh(string fileName)
         {
+            float[] vertices = new float[0];
+            List<uint> indices = new List<uint>();
+            
             float[] hardcodedTriangles = new float[]{
                /* -300f, -50f, -300f,
                 -300f, -50f, 300f,
@@ -37,12 +38,9 @@ namespace P
             };
 
             AssimpContext assimpContext = new AssimpContext();
-            string teapot = "../../models/teapot.obj";
-            string man = "../../models/man.obj";
-            string dragon = "../../models/xyzrgb_dragon.obj";
-            string bunny = "../../models/bunny.obj";
+            string filePath = "../../models/";
 
-            Scene model = assimpContext.ImportFile(dragon, PostProcessSteps.JoinIdenticalVertices);
+            Scene model = assimpContext.ImportFile(filePath + fileName, PostProcessSteps.JoinIdenticalVertices);
             
             Console.WriteLine("... : " + model.MeshCount);
             for (int i = 0; i < model.MeshCount; i++)
@@ -163,6 +161,8 @@ namespace P
                     }
                 }
             }
+
+            return new Mesh(vertices, indices);
         }
     }
 }

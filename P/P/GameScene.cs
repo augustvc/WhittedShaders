@@ -12,7 +12,7 @@ namespace P
         public static List<Matrix4> finalMatrices = new List<Matrix4>();
         public static List<GPUMaterial> finalMaterials = new List<GPUMaterial>();
 
-        public static List<uint> scene5Indices = new List<uint>();
+        public static uint[] scene5Indices = new uint[0];
         public static float[] scene5Vertices = new float[0];
 
         public static void LoadDefaultScene(uint sceneNumber)
@@ -77,7 +77,7 @@ namespace P
             }
             else if (sceneNumber == 5)
             {
-                for (int i = 0; i < scene5Indices.Count; i += 3)
+                for (int i = 0; i < scene5Indices.Length; i += 3)
                 {
                     Vector3 position = new Vector3(scene5Vertices[scene5Indices[i] * 3], scene5Vertices[scene5Indices[i] * 3 + 1], scene5Vertices[scene5Indices[i] * 3 + 2]);
                     position += new Vector3(scene5Vertices[scene5Indices[i + 1] * 3], scene5Vertices[scene5Indices[i + 1] * 3 + 1], scene5Vertices[scene5Indices[i + 1] * 3 + 2]);

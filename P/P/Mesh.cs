@@ -20,9 +20,14 @@ namespace P
     public class Mesh
     {
         public float[] vertices;
-        public List<uint> indices;
+        public uint[] indices;
 
         public Mesh(float[] vertices, List<uint> indices)
+        {
+            this.vertices = vertices;
+            this.indices = indices.ToArray();
+        }
+        public Mesh(float[] vertices, uint[] indices)
         {
             this.vertices = vertices;
             this.indices = indices;

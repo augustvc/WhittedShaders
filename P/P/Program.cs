@@ -65,7 +65,7 @@ namespace P
         }
 
         Mesh usedMesh;
-        ObjectBVH topLevelBVH;
+        ObjectBVH objectBVH;
 
         protected override void OnLoad(EventArgs e)
         {
@@ -77,13 +77,13 @@ namespace P
             Console.WriteLine("update period: " + this.UpdatePeriod);
             Console.WriteLine("update freq: " + this.UpdateFrequency);
 
-            MeshLoader.Init();
+            //Mesh teapotMesh = MeshLoader.LoadMesh("teapot.obj");
+            //Mesh manMesh = MeshLoader.LoadMesh("man.obj");
+            Mesh dragonMesh = MeshLoader.LoadMesh("xyzrgb_dragon.obj");
+            //Mesh bunnyMesh = MeshLoader.LoadMesh("bunny.obj");
 
-            Mesh loadedObj = new Mesh(MeshLoader.vertices, MeshLoader.indices);
-
-            usedMesh = loadedObj;
-
-            topLevelBVH = new ObjectBVH(usedMesh.vertices, usedMesh.indices.ToArray());
+            usedMesh = dragonMesh;
+            objectBVH = new ObjectBVH(usedMesh);
 
             GL.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
             VAO = GL.GenVertexArray();
@@ -103,7 +103,7 @@ namespace P
 
             gpuRayTracer = new GPURayTracer();
             GameScene.LoadDefaultScene(3);
-            gpuRayTracer.LoadScene(usedMesh.vertices, usedMesh.indices, topLevelBVH);
+            gpuRayTracer.LoadScene(usedMesh.vertices, usedMesh.indices, objectBVH);
 
             base.OnLoad(e);
         }
@@ -188,25 +188,25 @@ namespace P
                 if (ks.IsKeyDown(Key.Number1))
                 {
                     GameScene.LoadDefaultScene(1);
-                    gpuRayTracer.LoadScene(usedMesh.vertices, usedMesh.indices, topLevelBVH);
+                    gpuRayTracer.LoadScene(usedMesh.vertices, usedMesh.indices, objectBVH);
                     resetCounters();
                 }
                 if (ks.IsKeyDown(Key.Number2))
                 {
                     GameScene.LoadDefaultScene(2);
-                    gpuRayTracer.LoadScene(usedMesh.vertices, usedMesh.indices, topLevelBVH);
+                    gpuRayTracer.LoadScene(usedMesh.vertices, usedMesh.indices, objectBVH);
                     resetCounters();
                 }
                 if (ks.IsKeyDown(Key.Number3))
                 {
                     GameScene.LoadDefaultScene(3);
-                    gpuRayTracer.LoadScene(usedMesh.vertices, usedMesh.indices, topLevelBVH);
+                    gpuRayTracer.LoadScene(usedMesh.vertices, usedMesh.indices, objectBVH);
                     resetCounters();
                 }
                 if (ks.IsKeyDown(Key.Number4))
                 {
                     GameScene.LoadDefaultScene(4);
-                    gpuRayTracer.LoadScene(usedMesh.vertices, usedMesh.indices, topLevelBVH);
+                    gpuRayTracer.LoadScene(usedMesh.vertices, usedMesh.indices, objectBVH);
                     resetCounters();
                 }
                 if (ks.IsKeyDown(Key.Number5))
@@ -214,13 +214,13 @@ namespace P
                     GameScene.scene5Indices = usedMesh.indices;
                     GameScene.scene5Vertices = usedMesh.vertices;
                     GameScene.LoadDefaultScene(5);
-                    gpuRayTracer.LoadScene(usedMesh.vertices, usedMesh.indices, topLevelBVH);
+                    gpuRayTracer.LoadScene(usedMesh.vertices, usedMesh.indices, objectBVH);
                     resetCounters();
                 }
                 if (ks.IsKeyDown(Key.Number6))
                 {
                     GameScene.LoadDefaultScene(6);
-                    gpuRayTracer.LoadScene(usedMesh.vertices, usedMesh.indices, topLevelBVH);
+                    gpuRayTracer.LoadScene(usedMesh.vertices, usedMesh.indices, objectBVH);
                     resetCounters();
                 }
             }

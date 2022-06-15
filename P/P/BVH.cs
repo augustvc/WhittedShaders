@@ -24,58 +24,23 @@ namespace P
     class ObjectBVH
     {
         public float[] vertices;
-        public BVH TopBVH;
-
-        const int primsPerJob = 256;
-        int desiredThreads = 24;
-
-        Thread[] threads = new Thread[0];
-        public static List<Action> jobs = new List<Action>();
+        public BVH BVHRoot;
 
         const float constantCost = 5f;
 
-        public ObjectBVH(float[] vertices, uint[] indices)
+        public ObjectBVH(Mesh mesh)
         {
             Stopwatch sw = new Stopwatch();
             sw.Start();
 
-            this.vertices = vertices;
-            TopBVH = new BVH(vertices, indices);
+            vertices = mesh.vertices;
+            BVHRoot = new BVH(mesh.vertices, mesh.indices);
 
-            SlowSplit(TopBVH);
-            //RecursiveSplit(TopBVH, 8);
-            
-            threads = new Thread[desiredThreads];
-
-            for (int i = 0; i < desiredThreads; i++)
-            {
-                threads[i] = new Thread(() =>
-                {
-                    while (jobs.Count > 0)
-                    {
-                        Action job;
-                        lock (jobs)
-                        {
-                            if (jobs.Count == 0)
-                            {
-                                break;
-                            }
-                            job = jobs[jobs.Count - 1];
-                            jobs.RemoveAt(jobs.Count - 1);
-                        }
-                        job();
-                    }
-                }
-                );
-                threads[i].Start();
-            }
-            for (int i = 0; i < desiredThreads; i++) {
-                threads[i].Join();
-            }
+            SlowSplit(BVHRoot);
+            //RecursiveSplit(BVHRoot, 8);
 
             sw.Stop();
             Console.WriteLine("BVH building duration in ms: " + sw.ElapsedMilliseconds);
-
         }
 
         static float max(float a, float b, float c)
@@ -175,12 +140,6 @@ namespace P
                 Vector3[] minRs = new Vector3[tris.Length];
                 Vector3[] maxRs = new Vector3[tris.Length];
 
-                float scorePrims(int primAmnt)
-                {
-                    int retval = ((7+primAmnt) / 8) * 8;
-                    return retval;
-                }
-
                 for (int i = 0; i < tris.Length; i++)
                 {
                     TriMinMax(tris[i], ref MinL, ref MaxL);
@@ -242,7 +201,7 @@ namespace P
 
         void RecursiveSplit(BVH bvh, int binCount)
         {
-            if(bvh.triangleIndices.Length <= desiredTris * 3)
+            if (bvh.triangleIndices.Length <= desiredTris * 3)
             {
                 return;
             }
@@ -273,19 +232,21 @@ namespace P
             for (int i = 0; i < bvh.triangleIndices.Length; i += 3)
             {
                 int binNr = 0;
-                for (int j = i ; j < i + 3; j++)
+                for (int j = i; j < i + 3; j++)
                 {
                     int newBinNr = (int)((vertices[bvh.triangleIndices[j] * 3 + splitAxis] - bvh.AABBMin[splitAxis]) * binNumberMult);
-                    if (newBinNr > binNr) {
+                    if (newBinNr > binNr)
+                    {
                         binNr = newBinNr;
                     }
                 }
                 bins[binNr]++;
-                for(int j = i; j < i + 3; j++)
+                for (int j = i; j < i + 3; j++)
                 {
-                    for(int a = 0; a < 3; a++)
+                    for (int a = 0; a < 3; a++)
                     {
-                        if (vertices[bvh.triangleIndices[j] * 3 + a] < binMins[binNr][a]) {
+                        if (vertices[bvh.triangleIndices[j] * 3 + a] < binMins[binNr][a])
+                        {
                             binMins[binNr][a] = vertices[bvh.triangleIndices[j] * 3 + a];
                         }
                         if (vertices[bvh.triangleIndices[j] * 3 + a] > binMaxes[binNr][a])
@@ -301,36 +262,34 @@ namespace P
             Vector3 rightMins = binMins[binCount - 1];
             Vector3 rightMaxes = binMaxes[binCount - 1];
 
-
-
             float SAHLeft = BVH.CalculateHalfSA(leftMins, rightMaxes) * (bins[binCount - 1] + constantCost);
-            float SAHRight = BVH.CalculateHalfSA(rightMins,rightMaxes)*(bins[binCount-2]+constantCost);
-   
+            float SAHRight = BVH.CalculateHalfSA(rightMins, rightMaxes) * (bins[binCount - 2] + constantCost);
+
             int leftPrims = bins[0];
             int rightPrims = bins[binCount - 1];
 
-            
+
             bool[] binIsLeft = new bool[binCount];
             binIsLeft[0] = true;
             binIsLeft[binCount - 1] = false;
 
             bool highBin = false;
-            for(int i = 2; i < binCount; i++)
+            for (int i = 2; i < binCount; i++)
             {
                 int j = i / 2;
                 if (highBin)
                 {
-                    j = (binCount-1) - j;
+                    j = (binCount - 1) - j;
                 }
                 float changedSALeft = BVH.CalculateHalfSA(Vector3.ComponentMin(leftMins, binMins[j]), Vector3.ComponentMax(leftMaxes, binMaxes[j]));
                 float changedSARight = BVH.CalculateHalfSA(Vector3.ComponentMin(rightMins, binMins[j]), Vector3.ComponentMax(rightMaxes, binMaxes[j]));
 
-                
+
                 float changedSAHLeft = changedSALeft * ((float)(leftPrims + bins[j]) + constantCost);
                 float changedSAHRight = changedSARight * ((float)(rightPrims + bins[j]) + constantCost);
 
 
-               if ((changedSAHLeft - SAHLeft) < (changedSAHRight - SAHRight))
+                if ((changedSAHLeft - SAHLeft) < (changedSAHRight - SAHRight))
                 {
                     leftMins = Vector3.ComponentMin(leftMins, binMins[j]);
                     leftMaxes = Vector3.ComponentMax(leftMaxes, binMaxes[j]);
@@ -338,7 +297,7 @@ namespace P
                     SAHLeft = changedSAHLeft;
                     binIsLeft[j] = true;
                 }
-                else 
+                else
                 {
                     rightMins = Vector3.ComponentMin(rightMins, binMins[j]);
                     rightMaxes = Vector3.ComponentMax(rightMaxes, binMaxes[j]);
@@ -350,12 +309,12 @@ namespace P
                 highBin = !highBin;
             }
 
-            if (leftPrims == 0 || rightPrims == 0 )
+            if (leftPrims == 0 || rightPrims == 0)
             {
                 return;
             }
 
-            if (SAHLeft + SAHRight  >= bvh.SAH)
+            if (SAHLeft + SAHRight >= bvh.SAH)
             {
                 if (bvh.triangleIndices.Length < desiredTris * 3)
                 {
@@ -364,7 +323,7 @@ namespace P
             }
             SAHLeft *= ((float)(leftPrims) - constantCost) / ((float)leftPrims);
             SAHRight *= ((float)(rightPrims) - constantCost) / ((float)rightPrims);
-           
+
 
 
             uint[] leftIndices = new uint[leftPrims * 3];
@@ -374,7 +333,7 @@ namespace P
             int rightIterator = 0;
 
 
-            for (int i = 0; i < bvh.triangleIndices.Length; i+=3)
+            for (int i = 0; i < bvh.triangleIndices.Length; i += 3)
             {
                 int binNr = 0;
                 for (int j = i; j < i + 3; j++)
@@ -391,9 +350,9 @@ namespace P
                     leftIndices[leftIterator++] = bvh.triangleIndices[i];
                     leftIndices[leftIterator++] = bvh.triangleIndices[i + 1];
                     leftIndices[leftIterator++] = bvh.triangleIndices[i + 2];
-                    
+
                 }
-                else 
+                else
                 {
                     rightIndices[rightIterator++] = bvh.triangleIndices[i];
                     rightIndices[rightIterator++] = bvh.triangleIndices[i + 1];
@@ -410,30 +369,9 @@ namespace P
             bvh.rightChild = rightBVH;
 
             bvh.isLeaf = false;
-            
 
-            if (leftPrims < primsPerJob)
-            {
-                RecursiveSplit( leftBVH, binCount);
-            } else
-            {
-                lock (jobs)
-                {
-                    jobs.Add(new Action(() => RecursiveSplit( leftBVH, binCount)));
-                }
-            }
-
-            if (rightPrims < primsPerJob)
-            {
-                RecursiveSplit( rightBVH, binCount);
-            } else
-            {
-                lock (jobs)
-                {
-                    jobs.Add(new Action(() => RecursiveSplit( rightBVH, binCount)));
-                }
-            }
-
+            RecursiveSplit(leftBVH, binCount);
+            RecursiveSplit(rightBVH, binCount);
         }
     }
 }
