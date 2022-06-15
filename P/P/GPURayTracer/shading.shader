@@ -32,6 +32,7 @@ layout(std430, binding = 3) buffer shadowRayBuffer
 
 layout(binding = 4, offset = 8) uniform atomic_uint shadowRayCount;
 
+//This shader processes every single ray, and puts whatever energy they returned into the pixel it belongs to.
 void main() {
 	Ray ray;
 
@@ -41,12 +42,11 @@ void main() {
 		ray = shadowRays[gl_GlobalInvocationID.x + (iter * 262144)];
 
 		iter++;
-		//intersect(ray);
 
 		vec4 pixel = vec4(max(ray.ambient, ray.energy), 1.0);
 		if (ray.primID >= 0) {
+			//The shadow ray was obstructed by a primitive. Use ambient light instead of direct lighting.
 			pixel = vec4(ray.ambient, 1.0);
-			//pixel = vec4(0.0, 1.0, 0.0, 1.0);
 		}
 
 		ivec2 pixel_coords = ivec2(ray.pixelX, ray.pixelY);

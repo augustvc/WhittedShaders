@@ -104,6 +104,7 @@ float rayAABB(vec3 tmaxs, vec3 tmins) {
 		tmins.x = 0f;
 	}
 	if (tmins.x > tmaxs.x) {
+		// There is no intersection, return infinity so it gets tossed when comparing tmin to ray.t
 		tmins.x = 1. / 0.;
 	}
 	return tmins.x;
@@ -157,16 +158,24 @@ void doTris(int start, int end) {
 layout(location = 1) uniform bool anyHit;
 layout(location = 3) uniform int treeRoot;
 
+// The traversal stack. Any nodes we want to traverse get put on here. Its size significantly alters performance, so it is better to keep it as small as possible.
+// But don't make it too small! If you have a large scene with a deep BVH, it will overflow and potentially crash the program.
+// Something to look into later would be using a buffer to store and retrieve the 2nd (barely used) half of the stack, so that the array can be smaller.
+// Also, in earlier versions I used a shared int instead of an int[] as it was faster. 
+// But for some reason the reverse seems to be the case now, so I swapped them back.
 int stackCount;
 int stack[32];
+
 int restoreAt;
 
 #extension GL_ARB_shader_group_vote : enable
 
+// This shader has two functionalities.
+// One of them is taking input rays and finding the very first primitive they intersect (if any). (a.k.a. First hit)
+// The other one is taking input shadow rays and figuring out if the path from their origin to the light source is obstructed or not. (a.k.a. Any hit)
 void main() 
 {
 	rayNum = atomicCounterIncrement(intersectionJob);
-	//uint stackOffset = 0;// gl_LocalInvocationIndex * 32;
 
 	uint maxRays = 0;
 	if (anyHit) {
@@ -187,6 +196,7 @@ void main()
 		vec3 untransformedOrigin = ray.origin;
 		vec3 untransformedDir = ray.dir;
 
+		// The traversal stack. Put the root of the BVH on it as that's where we start traversing.
 		stack[0] = treeRoot;
 		stackCount = 1;
 
@@ -200,7 +210,9 @@ void main()
 		int loc = treeRoot;
 		BVH bvh = bvhs[loc];
 
-		//Triangle ranges that have to be done (tiny stack). This is used to do speculative traversal
+		// Triangle ranges that have to be done (tiny stack). This is used to do speculative traversal.
+		// Having multiple values to potentially assign to allows us to traverse a new BVH node, even if we already had a range of triangles lined up to test.
+		// I am intentionally not using an array for this, as I read online that GPUs can not dynamically index arrays in a register. It seems to perform well enough.
 		int foundTris = 0;
 		int start1 = 0;
 		int start2 = 0;
@@ -218,8 +230,8 @@ void main()
 			}
 			while (stackCount > 0 && foundTris < 2 && (!allInvocationsARB(foundTris > 0))) {
 				stackCount--;
-				
 				loc = stack[stackCount];
+				
 				if (stackCount == restoreAt) {
 					//We've exited our object. Restore the untransformed ray.
 
@@ -282,7 +294,7 @@ void main()
 					rightDist = tempF;
 				}
 
-				//Add left later, so it will get popped first.
+				//Add left later, so it will get popped and therefore traversed first.
 				if (rightDist >= 0f && rightDist < ray.t) {
 					if (bvh.rightOrStart != bvh.rightOrEnd && (bvh.rightOrEnd >= 0)) {
 						if (foundTris == 1) {
@@ -342,14 +354,17 @@ void main()
 
 			if (anyHit) {
 				if (ray.primID >= 0) {
+					// Shadow ray was obstructed. That's all we need to know about this ray.
 					break;
 				}
 			}
 		}
 
+		// Transform the ray back to its original form, so that when we process it later for e.g. N-dot-L shading, it doesn't use wrong values.
 		ray.origin = untransformedOrigin;
 		ray.dir = untransformedDir;
 
+		// Update the ray in the buffer that we originally pulled to do our calculations on.
 		if (anyHit) {
 			shadowRays[rayNum] = ray;
 		}

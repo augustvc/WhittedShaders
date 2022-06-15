@@ -110,6 +110,9 @@ layout(std430, binding = 9) buffer MaterialBuffer
 	Material materials[];
 };
 
+// This shader takes rays that just passed through the BVHIntersect shader, and decides what to do next with them.
+// If it was a specular object, the ray is reflected. If it was a diffuse object a shadow ray is cast.
+// If glass / refractive materials were in the project, this is where refractions would be handled.
 void main() {
 	uint rayNum;
 	uint totalRays = atomicCounter(rayCountIn);
@@ -154,6 +157,7 @@ void main() {
 			vec3 cross2 = cross(diff, ab);
 			float v = dot(rays[rayNum].dir, cross2) * detInv;
 
+			// Normal interpolation:
 			normal = normalize(
 				(1.0 - u - v) * vec3(vertexBuffer[normalsOffset + triAI * 3], vertexBuffer[normalsOffset + triAI * 3 + 1], vertexBuffer[normalsOffset + triAI * 3 + 2]) +
 				u * vec3(vertexBuffer[normalsOffset + triBI * 3], vertexBuffer[normalsOffset + triBI * 3 + 1], vertexBuffer[normalsOffset + triBI * 3 + 2]) +
@@ -164,7 +168,7 @@ void main() {
 			normal = normalize(dir_matrix * normal);
 		}
 
-		//Avoid shadow acne:
+		//Avoid shadow acne: add epsilon to shadow rays' origins.
 		float epsilon = (length(rays[rayNum].origin) + 1.0) * 0.001;
 		vec3 newOrigin = rays[rayNum].origin + rays[rayNum].dir * rays[rayNum].t + epsilon * normal;
 		
@@ -183,8 +187,11 @@ void main() {
 		}
 
 		if (mat.diffuse > 0.0) {
+			//N-dot-l shading:
 			float ndotl = max(dot(normalize(lightPosition - newOrigin), normal), 0);
+			//Distance attenuation:
 			float distSq = dot(lightPosition - newOrigin, lightPosition - newOrigin);
+
 			vec3 finalLight = ndotl * (lightValue / distSq);
 			for (int i = 0; i < 3; i++) {
 				finalLight[i] += 0.05;

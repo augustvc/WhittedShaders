@@ -36,6 +36,7 @@ uniform vec3 p1 = vec3(-1.0, -1.0, 2.0);
 uniform vec3 xArm = vec3(2.0, 0.0, 0.0);
 uniform vec3 yArm = vec3(0.0, 2.0, 0.0);
 
+//This shader creates all primary rays, pointing from the camera's origin into the world.
 void main() {
 	vec3 dir = normalize(
 		p1 +
